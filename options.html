@@ -2,11 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Options – Simple Contract Picker</title>
+<title>Options – Contract Picker</title>
 <style>
   body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
   h1 { color:#ff2b6a; }
   h2 { color:#ff9ac0; margin-top:20px; }
+  label { display:block; margin-top:8px; font-size:13px; }
+  textarea, select { width:100%; padding:7px; margin-top:3px; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
   button { width:100%; padding:10px; margin-top:15px; border:none; border-radius:4px; background:#ff2b6a; color:#fff; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
   .box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
@@ -17,79 +19,195 @@
 </head>
 <body>
 
-<h1>Options – Simple Contract Picker</h1>
+<h1>Options – Contract Picker</h1>
 <p class="note">
-  This page takes the setup from the Golden Formula page and turns it into a simple options idea.
+  This page reads the Golden Formula setup and your options chain, then picks a contract that is in the money or close to it.
 </p>
 
-<div id="formulaData" class="box"></div>
+<div class="box" id="setupBox"></div>
 
-<button onclick="makeSuggestion()">Get Options Suggestion</button>
+<div class="box">
+  <h2>1. Paste your options chain</h2>
+  <label>Paste in a simple format</label>
+  <textarea id="chainBox" placeholder="Example:
+strike, callBid, callAsk, putBid, putAsk
+12, 1.63, 2.31, 0.05, 0.07
+12.5, 1.33, 1.77, 0.09, 0.15
+13, 0.90, 1.04, 0.19, 0.23
+..."></textarea>
+  <p class="note">
+    You can copy from your app and quickly re‑type the numbers in this simple format.
+  </p>
 
-<div id="optionsOutput"></div>
+  <label>Days until expiration</label>
+  <select id="days">
+    <option value="1">1–2 days</option>
+    <option value="3">3–5 days</option>
+    <option value="7">About 1 week</option>
+    <option value="14">About 2 weeks</option>
+    <option value="30">About 1 month</option>
+  </select>
+</div>
 
-<button onclick="window.location.href='index.html'">← Back to Setup Page</button>
+<button onclick="pickContract()">Pick Contract</button>
+
+<div id="optionsOutput" class="result"></div>
+
+<button onclick="window.location.href='index.html'">← Back to Setup</button>
+<button onclick="window.location.href='simulator.html'">Go to Simulator →</button>
 
 <script>
-function loadFormulaData() {
+function loadSetup() {
   const direction = localStorage.getItem("gf_direction") || "none";
   const entry = localStorage.getItem("gf_entry") || "";
   const stop = localStorage.getItem("gf_stop") || "";
-  const timeframe = localStorage.getItem("gf_timeframe") || "unknown";
+  const price = localStorage.getItem("gf_price") || "";
+  const tf = localStorage.getItem("gf_timeframe") || "unknown";
 
-  document.getElementById("formulaData").innerHTML = `
-    <h2>Setup From Previous Page</h2>
-    <p><strong>Type:</strong> ${direction === "call" ? "CALL (bet on up)" : direction === "put" ? "PUT (bet on down)" : "No trade"}</p>
-    <p><strong>Entry:</strong> ${entry || "—"}</p>
-    <p><strong>Stop (20%):</strong> ${stop || "—"}</p>
-    <p><strong>Timeframe:</strong> ${timeframe}</p>
+  document.getElementById("setupBox").innerHTML = `
+    <h2>Setup From Golden Formula</h2>
+    <p><strong>Type:</strong> ${
+      direction === "call" ? "CALL (bet on up)" :
+      direction === "put" ? "PUT (bet on down)" :
+      "No trade"
+    }</p>
+    <p><strong>Entry Level (even number):</strong> ${entry || "—"}</p>
+    <p><strong>Chart Stop (20% idea):</strong> ${stop || "—"}</p>
+    <p><strong>Current Price (from setup):</strong> ${price || "—"}</p>
+    <p><strong>Timeframe:</strong> ${tf}</p>
     <p class="note">If this shows “No trade”, the first page did not find a clean setup.</p>
   `;
 }
 
-function makeSuggestion() {
+function parseChain(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const rows = [];
+  lines.forEach(line => {
+    const parts = line.split(',').map(x => x.trim());
+    if (parts.length >= 5) {
+      const strike = parseFloat(parts[0]);
+      const callBid = parseFloat(parts[1]);
+      const callAsk = parseFloat(parts[2]);
+      const putBid = parseFloat(parts[3]);
+      const putAsk = parseFloat(parts[4]);
+      if (!isNaN(strike)) {
+        rows.push({ strike, callBid, callAsk, putBid, putAsk });
+      }
+    }
+  });
+  return rows;
+}
+
+function pickContract() {
   const direction = localStorage.getItem("gf_direction") || "none";
   const entry = parseFloat(localStorage.getItem("gf_entry") || "0");
-  const timeframe = localStorage.getItem("gf_timeframe") || "unknown";
+  const price = parseFloat(localStorage.getItem("gf_price") || "0");
+  const days = parseInt(document.getElementById("days").value, 10);
 
-  if (direction === "none" || !entry) {
+  if (direction === "none" || !entry || !price) {
     document.getElementById("optionsOutput").innerHTML = `
-      <div class="result">
-        <h2>No Options Idea</h2>
-        <p>The first page did not find a clear, simple setup. There is nothing to turn into an options trade.</p>
-      </div>
+      <h2>No Options Idea</h2>
+      <p>The setup is not clear enough to turn into an options trade.</p>
     `;
     return;
   }
 
-  // Simple expiration suggestion based on timeframe
-  let expiration = "";
-  if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days from now";
-  else if (timeframe === "1h") expiration = "3–5 days from now";
-  else if (timeframe === "4h") expiration = "1–2 weeks from now";
-  else expiration = "2–4 weeks from now";
+  const chain = parseChain(document.getElementById("chainBox").value);
+  if (!chain.length) {
+    document.getElementById("optionsOutput").innerHTML = `
+      <h2>No Chain Data</h2>
+      <p>Please paste your options chain in the simple format shown above.</p>
+    `;
+    return;
+  }
 
-  const typeText = direction === "call" ? "CALL (you think price will go up)" : "PUT (you think price will go down)";
+  let best = null;
+  let notes = [];
+
+  if (direction === "call") {
+    notes.push("We are looking for a CALL that is in the money or very close to it.");
+    chain.forEach(row => {
+      if (row.strike <= entry) {
+        const distance = Math.abs(entry - row.strike);
+        if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "CALL" };
+      }
+    });
+    if (!best) {
+      chain.forEach(row => {
+        if (row.strike > entry) {
+          const distance = Math.abs(entry - row.strike);
+          if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "CALL" };
+        }
+      });
+    }
+  } else if (direction === "put") {
+    notes.push("We are looking for a PUT that is in the money or very close to it.");
+    chain.forEach(row => {
+      if (row.strike >= entry) {
+        const distance = Math.abs(entry - row.strike);
+        if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "PUT" };
+      }
+    });
+    if (!best) {
+      chain.forEach(row => {
+        if (row.strike < entry) {
+          const distance = Math.abs(entry - row.strike);
+          if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "PUT" };
+        }
+      });
+    }
+  }
+
+  if (!best) {
+    document.getElementById("optionsOutput").innerHTML = `
+      <h2>No Matching Contract</h2>
+      <p>Could not find a strike near the entry level.</p>
+    `;
+    return;
+  }
+
+  let midPrice = 0;
+  if (best.type === "CALL") {
+    midPrice = (best.callBid + best.callAsk) / 2;
+  } else {
+    midPrice = (best.putBid + best.putAsk) / 2;
+  }
+  midPrice = isNaN(midPrice) ? 0 : midPrice;
+  const stopLossOption = (midPrice * 0.8).toFixed(2);
+
+  notes.push("We picked the strike closest to your even‑number entry level.");
+  notes.push("We used the middle of bid and ask as a rough price.");
+  notes.push("A simple idea is to risk about 20% of the option price (same spirit as the chart stop).");
+
+  let directionText = direction === "call"
+    ? "CALL (you think price will go up from the even number)."
+    : "PUT (you think price will go down from the even number).";
+
+  let expiryText = "";
+  if (days <= 2) expiryText = "very short‑term move (1–2 days).";
+  else if (days <= 5) expiryText = "short‑term move (3–5 days).";
+  else if (days <= 10) expiryText = "about a week or so.";
+  else if (days <= 20) expiryText = "a couple of weeks.";
+  else expiryText = "a swing over about a month.";
 
   document.getElementById("optionsOutput").innerHTML = `
-    <div class="result">
-      <h2>Simple Options Idea</h2>
-      <p><strong>Contract Type:</strong> ${typeText}</p>
-      <p><strong>Strike Price:</strong> Around ${entry.toFixed(2)} (the entry level from the first page).</p>
-      <p><strong>Expiration:</strong> ${expiration}</p>
-      <h3>Plain English Explanation</h3>
-      <ul>
-        <li>The first page found a very clear setup using moving averages, obvious bottoms/tops, and a strong bounce at an even number.</li>
-        <li>We use that same level as the “strike” area for the options contract.</li>
-        <li>We keep the stop loss idea simple on the chart (20% away), but here we just focus on the direction and level.</li>
-        <li>If it was a CALL setup, you are betting price will move up from that even number. If it was a PUT setup, you are betting price will move down from that even number.</li>
-      </ul>
-      <p class="note">This is a teaching tool. It does not guarantee profit. It just turns a simple chart idea into a simple options idea.</p>
-    </div>
+    <h2>Suggested Options Contract</h2>
+    <p><strong>Direction:</strong> ${directionText}</p>
+    <p><strong>Strike:</strong> ${best.strike}</p>
+    <p><strong>Type:</strong> ${best.type}</p>
+    <p><strong>Approx. Option Price:</strong> ${midPrice ? midPrice.toFixed(2) : "N/A"}</p>
+    <p><strong>Simple Stop Idea on Option:</strong> about ${stopLossOption} (20% below that rough price).</p>
+    <p><strong>Expiration:</strong> This looks like a ${expiryText}</p>
+    <h3>Why this contract:</h3>
+    <ul>${notes.map(n => `<li>${n}</li>`).join("")}</ul>
+    <p class="note">
+      This is a teaching tool. It turns your simple chart idea into a simple options idea.
+      It does not promise profit.
+    </p>
   `;
 }
 
-loadFormulaData();
+loadSetup();
 </script>
 
 </body>
