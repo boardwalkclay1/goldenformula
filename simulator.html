@@ -2,14 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Price Simulator – Golden Formula Logic</title>
+<title>Price Simulator – Golden Formula View</title>
+<script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 <style>
   body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:1000px; margin:0 auto; }
   h1 { color:#ff2b6a; }
   h2 { color:#ff9ac0; margin-top:20px; }
   label { display:block; margin-top:8px; font-size:13px; }
   input, select, textarea { width:100%; padding:7px; margin-top:3px; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
-  textarea { min-height:80px; font-family:monospace; }
+  textarea { min-height:70px; font-family:monospace; }
   button { width:100%; padding:10px; margin-top:15px; border:none; border-radius:4px; background:#ff2b6a; color:#fff; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
   .box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
@@ -21,57 +22,30 @@
 </head>
 <body>
 
-<h1>Price Simulator – Golden Formula Logic</h1>
+<h1>Price Simulator – Golden Formula View</h1>
 <p class="note">
-  This page shows candles, moving averages, a “now” line, and a predicted path using only simple rules:
-  moving averages, highs/lows, even numbers, and obvious patterns.
+  This page shows candles, moving averages, a “NOW” line, and a predicted route using the same logic as the Home and Options pages.
 </p>
 
-<div class="box">
-  <h2>1. Where should we get the numbers?</h2>
-
-  <label>Source</label>
-  <select id="source">
-    <option value="storage">From Golden Formula page (saved automatically)</option>
-    <option value="paste">From text I paste below</option>
-    <option value="manual">I will type them in</option>
-  </select>
-
-  <label>Paste data here (optional)
-    <span class="note">
-      Example: <br>
-      price: 13.69, high: 14.18, low: 13.37, maFast: 13.90, maSlow: 13.64, ma200: 13.53
-    </span>
-  </label>
-  <textarea id="pasteBox"></textarea>
-
-  <div id="manualBox" style="display:none;">
-    <label>Current Price</label>
-    <input id="price" type="number" step="0.01">
-    <label>Day High</label>
-    <input id="dayHigh" type="number" step="0.01">
-    <label>Day Low</label>
-    <input id="dayLow" type="number" step="0.01">
-    <label>Fast Moving Average (20)</label>
-    <input id="maFast" type="number" step="0.01">
-    <label>Slow Moving Average (50)</label>
-    <input id="maSlow" type="number" step="0.01">
-    <label>Long Moving Average (200)</label>
-    <input id="ma200" type="number" step="0.01">
-  </div>
-</div>
+<div class="box" id="setupBox"></div>
 
 <div class="box">
-  <h2>2. View Mode</h2>
-  <label>Chart Style</label>
+  <h2>1. Screenshot or text (auto‑read)</h2>
+
+  <label>Upload chart screenshot</label>
+  <input type="file" id="imageInput" accept="image/*">
+  <p class="note" id="ocrStatus">No image loaded yet.</p>
+
+  <label>Or paste chart text</label>
+  <textarea id="pasteBox" placeholder="Example:
+price: 13.69, high: 14.18, low: 13.37, ma20: 13.90, ma50: 13.64, ma200: 13.53"></textarea>
+
+  <label>View mode</label>
   <select id="viewMode">
     <option value="real">Real‑style candles (with wicks)</option>
     <option value="simple">Simple block candles</option>
     <option value="line">Line only (no candles)</option>
   </select>
-  <p class="note">
-    You can switch modes any time. The logic stays the same.
-  </p>
 </div>
 
 <button onclick="runSimulator()">Run Simulator</button>
@@ -80,134 +54,140 @@
 
 <div id="explanation" class="result"></div>
 
-<button onclick="window.location.href='index.html'">← Back to Golden Formula</button>
+<div class="box">
+  <button onclick="downloadSnapshot()">Download Simulator Snapshot</button>
+  <button onclick="window.location.href='index.html'">← Back to Home</button>
+  <button onclick="window.location.href='options.html'">Go to Options Page →</button>
+</div>
 
 <script>
-// --- helpers to parse pasted text ---
-function parsePasted(text) {
+// ----- shared helpers (match index/options) -----
+function autoCorrectNumber(raw, hintMin, hintMax) {
+  if (raw == null || isNaN(raw)) return null;
+  let v = raw;
+  if (v > 1000 && hintMax && hintMax < 100) v = v / 100;
+  if (hintMin != null && v < hintMin * 0.1) v = v * 0.1;
+  if (hintMax != null && v > hintMax * 10) v = v * 0.1;
+  return v;
+}
+function parseLooseText(text) {
   const out = {};
-  const pairs = text.split(/[,;\n]/);
-  pairs.forEach(p => {
-    const parts = p.split(':');
-    if (parts.length === 2) {
-      const key = parts[0].trim().toLowerCase();
-      const val = parseFloat(parts[1].trim());
-      if (!isNaN(val)) {
-        if (key.includes("price")) out.price = val;
-        if (key.includes("high")) out.dayHigh = val;
-        if (key.includes("low")) out.dayLow = val;
-        if (key.includes("fast")) out.maFast = val;
-        if (key.includes("slow")) out.maSlow = val;
-        if (key.includes("200")) out.ma200 = val;
-        if (key === "ma20") out.maFast = val;
-        if (key === "ma50") out.maSlow = val;
-      }
+  const tokens = text.replace(/\n/g, ' ').split(/[\s,]+/);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].toLowerCase();
+    const next = parseFloat(tokens[i+1]);
+    if (t.includes("ma20") || t === "ma20:") out.maFast = next;
+    if (t.includes("ma50") || t === "ma50:") out.maSlow = next;
+    if (t.includes("ma200") || t === "ma200:") out.ma200 = next;
+    if (t === "h/l" || t === "h/l:") {
+      const hi = parseFloat(tokens[i+1]);
+      const lo = parseFloat(tokens[i+3]);
+      if (!isNaN(hi)) out.dayHigh = hi;
+      if (!isNaN(lo)) out.dayLow = lo;
     }
-  });
+  }
+
+  const nums = tokens.map(x => parseFloat(x)).filter(x => !isNaN(x));
+  if (nums.length) {
+    const sorted = [...nums].sort((a,b)=>a-b);
+    const min = sorted[0], max = sorted[sorted.length-1];
+    const mid = sorted[Math.floor(sorted.length/2)];
+    out.price = mid;
+    if (!out.dayHigh || !out.dayLow) {
+      out.dayLow = min;
+      out.dayHigh = max;
+    }
+  }
   return out;
 }
+function nearestEven(price) { return Math.round(price / 5) * 5; }
 
-function nearestEven(price) {
-  return Math.round(price / 5) * 5;
+// ----- load setup from Home page -----
+function loadSetupBox() {
+  const direction = localStorage.getItem("gf_direction") || "none";
+  const entry = localStorage.getItem("gf_entry") || "";
+  const stop = localStorage.getItem("gf_stop") || "";
+  const price = localStorage.getItem("gf_price") || "";
+  const tf = localStorage.getItem("gf_timeframe") || "unknown";
+
+  document.getElementById("setupBox").innerHTML = `
+    <h2>Setup From Golden Formula</h2>
+    <p><strong>Type:</strong> ${
+      direction === "call" ? "CALL (bet on up)" :
+      direction === "put" ? "PUT (bet on down)" :
+      "No trade"
+    }</p>
+    <p><strong>Entry (even number):</strong> ${entry || "—"}</p>
+    <p><strong>Chart Stop (20% idea):</strong> ${stop || "—"}</p>
+    <p><strong>Current Price:</strong> ${price || "—"}</p>
+    <p><strong>Timeframe:</strong> ${tf}</p>
+    <p class="note">The simulator will use this as the base, but you can override with a screenshot or pasted text.</p>
+  `;
 }
 
-// --- main data gather ---
-function getInputData() {
-  const source = document.getElementById("source").value;
-  let data = {};
-
-  if (source === "storage") {
-    const entry = parseFloat(localStorage.getItem("gf_entry") || "0");
-    const direction = localStorage.getItem("gf_direction") || "none";
-    const tf = localStorage.getItem("gf_timeframe") || "unknown";
-    // we still need MAs and high/low, so user should paste or type those once
-    data.price = entry || 0;
-    data.timeframe = tf;
-    data.directionHint = direction;
-  }
-
-  if (source === "paste") {
-    const parsed = parsePasted(document.getElementById("pasteBox").value);
-    data = Object.assign(data, parsed);
-  }
-
-  if (source === "manual") {
-    data.price = parseFloat(document.getElementById("price").value);
-    data.dayHigh = parseFloat(document.getElementById("dayHigh").value);
-    data.dayLow = parseFloat(document.getElementById("dayLow").value);
-    data.maFast = parseFloat(document.getElementById("maFast").value);
-    data.maSlow = parseFloat(document.getElementById("maSlow").value);
-    data.ma200 = parseFloat(document.getElementById("ma200").value);
-  }
-
-  return data;
-}
-
-// --- pattern + cross + prediction logic (simple, rule‑based) ---
+// ----- analysis logic for simulator -----
 function analyzeLogic(d) {
   const notes = [];
-  let direction = "none";
+  let direction = localStorage.getItem("gf_direction") || "none";
 
   if (isNaN(d.price) || isNaN(d.maFast) || isNaN(d.maSlow)) {
-    notes.push("Missing price or moving averages. Please fill or paste them.");
-    return { direction, notes, predictionSlope: 0 };
+    notes.push("Missing price or moving averages. Please make sure they are readable.");
+    return { direction: "none", notes, predictionSlope: 0 };
   }
 
-  // trend from fast vs slow
-  if (d.maFast > d.maSlow && d.price > d.maFast) {
-    direction = "up";
-    notes.push("Fast moving average is above slow and price is above both → up move.");
-  } else if (d.maFast < d.maSlow && d.price < d.maFast) {
-    direction = "down";
-    notes.push("Fast moving average is below slow and price is below both → down move.");
+  if (direction === "none") {
+    if (d.maFast > d.maSlow && d.price > d.maFast) {
+      direction = "call";
+      notes.push("Fast moving average is above slow and price is above both → up move.");
+    } else if (d.maFast < d.maSlow && d.price < d.maFast) {
+      direction = "put";
+      notes.push("Fast moving average is below slow and price is below both → down move.");
+    } else {
+      direction = "none";
+      notes.push("Moving averages do not clearly show up or down.");
+    }
   } else {
-    direction = "sideways";
-    notes.push("Moving averages do not clearly show up or down → sideways / unsure.");
+    if (direction === "call") notes.push("Home page marked this as a CALL idea (up move).");
+    if (direction === "put") notes.push("Home page marked this as a PUT idea (down move).");
   }
 
-  // golden / death cross and near cross
   if (!isNaN(d.ma200)) {
     if (d.maFast > d.maSlow && d.maFast > d.ma200) {
-      notes.push("This looks like a golden cross (fast above slow and long).");
+      notes.push("Fast is above slow and long → golden cross style uptrend.");
     } else if (d.maFast < d.maSlow && d.maFast < d.ma200) {
-      notes.push("This looks like a death cross (fast below slow and long).");
+      notes.push("Fast is below slow and long → death cross style downtrend.");
     }
   }
   const diff = Math.abs(d.maFast - d.maSlow);
   if (diff <= d.price * 0.005) {
-    notes.push("Fast and slow moving averages are very close → a cross may be coming soon.");
+    notes.push("Fast and slow moving averages are very close → a cross may be coming.");
   }
 
-  // even number reaction
+  if (!isNaN(d.dayHigh) && !isNaN(d.dayLow)) {
+    const range = d.dayHigh - d.dayLow;
+    if (range > 0) {
+      const pos = (d.price - d.dayLow) / range;
+      if (pos < 0.2) notes.push("Price is near the low of the day → could be a bottom area.");
+      else if (pos > 0.8) notes.push("Price is near the high of the day → could be a top area.");
+    }
+  }
+
   const even = nearestEven(d.price);
   const evenDiff = Math.abs(d.price - even);
   if (evenDiff <= d.price * 0.003) {
     notes.push("Price is reacting near a clean even number around " + even + ".");
   }
 
-  // simple pattern hints from day high/low
-  if (!isNaN(d.dayHigh) && !isNaN(d.dayLow)) {
-    const range = d.dayHigh - d.dayLow;
-    if (range > 0) {
-      const pos = (d.price - d.dayLow) / range;
-      if (pos < 0.2) {
-        notes.push("Price is near the low of the day → could be a bottom area.");
-      } else if (pos > 0.8) {
-        notes.push("Price is near the high of the day → could be a top area.");
-      }
-    }
-  }
-
-  // prediction slope: how strong to bend the future line
   let slope = 0;
-  if (direction === "up") slope = 0.6;
-  if (direction === "down") slope = -0.6;
-  if (direction === "sideways") slope = 0.1;
+  if (direction === "call") slope = 0.6;
+  if (direction === "put") slope = -0.6;
+  if (direction === "none") slope = 0.1;
 
   return { direction, notes, predictionSlope: slope };
 }
 
-// --- chart drawing ---
+// ----- chart drawing -----
 function drawSimulator(d, analysis) {
   const canvas = document.getElementById("chart");
   const ctx = canvas.getContext("2d");
@@ -215,13 +195,11 @@ function drawSimulator(d, analysis) {
 
   const viewMode = document.getElementById("viewMode").value;
 
-  // build fake past + future candles around price
   const total = 40;
   const nowIndex = 25;
   const candles = [];
   let base = d.price || 100;
 
-  // past candles
   for (let i = 0; i < nowIndex; i++) {
     const noise = (Math.random() - 0.5) * 0.8;
     const close = base + noise - (nowIndex - i) * 0.05;
@@ -231,7 +209,6 @@ function drawSimulator(d, analysis) {
     candles.push({open, high, low, close});
   }
 
-  // current candle at index nowIndex
   candles.push({
     open: d.price - 0.2,
     high: (d.dayHigh || d.price + 0.4),
@@ -239,7 +216,6 @@ function drawSimulator(d, analysis) {
     close: d.price
   });
 
-  // future candles based on prediction slope
   let lastClose = d.price;
   for (let i = nowIndex + 1; i < total; i++) {
     const step = (i - nowIndex);
@@ -253,7 +229,6 @@ function drawSimulator(d, analysis) {
     lastClose = close;
   }
 
-  // scale
   const prices = candles.flatMap(c => [c.high, c.low]);
   const minP = Math.min.apply(null, prices);
   const maxP = Math.max.apply(null, prices);
@@ -266,11 +241,9 @@ function drawSimulator(d, analysis) {
     return h - pad - ((v - minP) / (maxP - minP || 1)) * (h - pad*2);
   }
 
-  // background
   ctx.fillStyle = "#050509";
   ctx.fillRect(0,0,w,h);
 
-  // draw candles or line
   if (viewMode === "real" || viewMode === "simple") {
     candles.forEach((c, i) => {
       const x = pad + i*cw + cw/2;
@@ -280,24 +253,20 @@ function drawSimulator(d, analysis) {
       ctx.fillStyle = color;
 
       if (viewMode === "real") {
-        // wick
         ctx.beginPath();
         ctx.moveTo(x, y(c.high));
         ctx.lineTo(x, y(c.low));
         ctx.stroke();
-        // body
         const top = y(Math.max(c.open, c.close));
         const bot = y(Math.min(c.open, c.close));
         const bh = Math.max(2, bot - top);
         ctx.fillRect(x - cw*0.3, top, cw*0.6, bh);
       } else {
-        // simple block
         const mid = y(c.close);
         ctx.fillRect(x - cw*0.35, mid - 6, cw*0.7, 12);
       }
     });
   } else {
-    // line only
     ctx.strokeStyle = "#3cff9d";
     ctx.beginPath();
     candles.forEach((c,i)=>{
@@ -309,7 +278,6 @@ function drawSimulator(d, analysis) {
     ctx.stroke();
   }
 
-  // moving averages (simple from closes)
   const closes = candles.map(c => c.close);
   function sma(idx, len) {
     if (idx < len-1) return null;
@@ -319,11 +287,11 @@ function drawSimulator(d, analysis) {
   }
 
   ctx.lineWidth = 1.5;
-  // fast MA (20)
+
   ctx.strokeStyle = "#ffcc00";
   ctx.beginPath();
   candles.forEach((c,i)=>{
-    const v = sma(i, 5); // shorter for demo
+    const v = sma(i, 5);
     if (v === null) return;
     const x = pad + i*cw + cw/2;
     const yy = y(v);
@@ -332,7 +300,6 @@ function drawSimulator(d, analysis) {
   });
   ctx.stroke();
 
-  // slow MA (50) – longer window
   ctx.strokeStyle = "#00b7ff";
   ctx.beginPath();
   candles.forEach((c,i)=>{
@@ -345,7 +312,7 @@ function drawSimulator(d, analysis) {
   });
   ctx.stroke();
 
-  // NOW line
+  const nowIndex = 25;
   const nowX = pad + nowIndex*cw + cw/2;
   ctx.strokeStyle = "#ffffff";
   ctx.setLineDash([4,4]);
@@ -354,34 +321,83 @@ function drawSimulator(d, analysis) {
   ctx.lineTo(nowX, h - pad);
   ctx.stroke();
   ctx.setLineDash([]);
-
-  // label
   ctx.fillStyle = "#ffffff";
   ctx.font = "11px Arial";
   ctx.fillText("NOW", nowX - 12, pad + 10);
 }
 
-// --- main run ---
+// ----- main run -----
 function runSimulator() {
-  const data = getInputData();
-  const analysis = analyzeLogic(data);
-  drawSimulator(data, analysis);
+  const pasteText = document.getElementById("pasteBox").value || "";
+  const parsed = pasteText ? parseLooseText(pasteText) : {};
+
+  const basePrice = parseFloat(localStorage.getItem("gf_price") || "0");
+  const baseHigh = parseFloat(localStorage.getItem("gf_dayHigh") || "0");
+  const baseLow = parseFloat(localStorage.getItem("gf_dayLow") || "0");
+  const baseFast = parseFloat(localStorage.getItem("gf_maFast") || "0");
+  const baseSlow = parseFloat(localStorage.getItem("gf_maSlow") || "0");
+  const base200 = parseFloat(localStorage.getItem("gf_ma200") || "0");
+
+  const d = {
+    price: autoCorrectNumber(parsed.price ?? basePrice, 1, 1000),
+    dayHigh: autoCorrectNumber(parsed.dayHigh ?? baseHigh, 1, 1000),
+    dayLow: autoCorrectNumber(parsed.dayLow ?? baseLow, 1, 1000),
+    maFast: autoCorrectNumber(parsed.maFast ?? baseFast, 1, 1000),
+    maSlow: autoCorrectNumber(parsed.maSlow ?? baseSlow, 1, 1000),
+    ma200: autoCorrectNumber(parsed.ma200 ?? base200, 1, 1000)
+  };
+
+  const analysis = analyzeLogic(d);
+  drawSimulator(d, analysis);
 
   document.getElementById("explanation").innerHTML = `
     <h2>What the simulator sees</h2>
     <ul>${analysis.notes.map(n => `<li>${n}</li>`).join("")}</ul>
     <p class="note">
-      The future path is just a smart guess based on moving averages, even numbers, and simple “up / down / sideways” logic.
+      The future path is a smart guess based on moving averages, even numbers, and simple “up / down / sideways” logic.
       It is for learning, not for promises.
     </p>
   `;
 }
 
-// show/hide manual box
-document.getElementById("source").addEventListener("change", function() {
-  document.getElementById("manualBox").style.display =
-    this.value === "manual" ? "block" : "none";
+// ----- download snapshot -----
+function downloadSnapshot() {
+  const data = {
+    direction: localStorage.getItem("gf_direction"),
+    entry: localStorage.getItem("gf_entry"),
+    stop: localStorage.getItem("gf_stop"),
+    price: localStorage.getItem("gf_price"),
+    maFast: localStorage.getItem("gf_maFast"),
+    maSlow: localStorage.getItem("gf_maSlow"),
+    ma200: localStorage.getItem("gf_ma200"),
+    dayHigh: localStorage.getItem("gf_dayHigh"),
+    dayLow: localStorage.getItem("gf_dayLow"),
+    timeframe: localStorage.getItem("gf_timeframe")
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "simulator_snapshot.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ----- OCR hook -----
+document.getElementById("imageInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById("ocrStatus").textContent = "Reading image...";
+  Tesseract.recognize(file, 'eng').then(({ data }) => {
+    const text = data.text || "";
+    document.getElementById("pasteBox").value = text;
+    document.getElementById("ocrStatus").textContent = "Image read. Text pasted automatically. Press 'Run Simulator'.";
+  }).catch(() => {
+    document.getElementById("ocrStatus").textContent = "Could not read image. Try a clearer screenshot.";
+  });
 });
+
+loadSetupBox();
 </script>
 
 </body>
