@@ -2,23 +2,50 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Options Contract Selector</title>
+<title>Advanced Options Selector – Golden Formula Linked</title>
 <style>
-  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:800px; margin:0 auto; }
-  h2 { color:#ff2b6a; }
-  h3 { color:#ff9ac0; margin-top:25px; }
+  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
+  h1 { color:#ff2b6a; }
+  h2 { color:#ff9ac0; margin-top:25px; }
   label { display:block; margin-top:8px; font-size:13px; }
   select { padding:7px; width:100%; background:#15151b; color:#fff; border:1px solid #333; border-radius:4px; }
   button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
+  .section-box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
   .result { margin-top:20px; padding:15px; border-radius:8px; background:#123822; border:1px solid #1f8b4c; }
+  .note { font-size:11px; color:#b0b0c0; margin-top:3px; }
+  ul { margin-top:10px; }
 </style>
 </head>
 <body>
 
-<h2>Options Contract Selector</h2>
+<h1>Advanced Options Selector</h1>
+<p class="note">
+  This engine reads the Golden Formula output and selects the most statistically aligned options contract based on trend strength, score, R:R, timeframe, and risk profile.
+</p>
 
-<div id="formulaData"></div>
+<div id="formulaData" class="section-box"></div>
+
+<div class="section-box">
+  <h2>Risk Profile & Strategy</h2>
+
+  <label>Risk Level
+    <span class="note">Determines moneyness, delta, and leverage.</span>
+  </label>
+  <select id="riskLevel">
+    <option value="low">Low – Deep ITM, high delta</option>
+    <option value="medium">Medium – ATM, balanced</option>
+    <option value="high">High – OTM, high leverage</option>
+  </select>
+
+  <label>Advanced Options Mode
+    <span class="note">Enables delta‑based strike tuning and expiration compression.</span>
+  </label>
+  <select id="advancedMode">
+    <option value="on">ON – Full advanced logic</option>
+    <option value="off">OFF – Simple Calls/Puts only</option>
+  </select>
+</div>
 
 <button onclick="runOptions()">Generate Options Recommendation</button>
 
@@ -27,58 +54,143 @@
 <button onclick="window.location.href='index.html'">← Back to Golden Formula</button>
 
 <script>
+// Load Golden Formula data
 function loadFormulaData() {
-  const direction = localStorage.getItem("gf_direction");
-  const score = localStorage.getItem("gf_score");
-  const entry = localStorage.getItem("gf_entry");
-  const stop = localStorage.getItem("gf_stop");
-  const timeframe = localStorage.getItem("gf_timeframe");
+  const direction = localStorage.getItem("gf_direction") || "neutral";
+  const score = parseFloat(localStorage.getItem("gf_score") || "0");
+  const entry = parseFloat(localStorage.getItem("gf_entry") || "0");
+  const stop = parseFloat(localStorage.getItem("gf_stop") || "0");
+  const target = parseFloat(localStorage.getItem("gf_target") || "0");
+  const rr = parseFloat(localStorage.getItem("gf_rr") || "0");
+  const timeframe = localStorage.getItem("gf_timeframe") || "unknown";
 
   document.getElementById("formulaData").innerHTML = `
-    <div class="result">
-      <h3>Golden Formula Output</h3>
-      <p><strong>Direction:</strong> ${direction}</p>
-      <p><strong>Score:</strong> ${score}</p>
-      <p><strong>Entry:</strong> ${entry}</p>
-      <p><strong>Stop:</strong> ${stop}</p>
-      <p><strong>Timeframe:</strong> ${timeframe}</p>
-    </div>
+    <h2>Golden Formula Output</h2>
+    <p><strong>Direction:</strong> ${direction}</p>
+    <p><strong>Score:</strong> ${score}</p>
+    <p><strong>Entry:</strong> ${entry}</p>
+    <p><strong>Stop:</strong> ${stop}</p>
+    <p><strong>Target:</strong> ${target}</p>
+    <p><strong>R:R:</strong> ${rr}:1</p>
+    <p><strong>Timeframe:</strong> ${timeframe}</p>
   `;
 }
 
-function runOptions() {
-  const direction = localStorage.getItem("gf_direction");
-  const score = parseInt(localStorage.getItem("gf_score"));
-  const entry = parseFloat(localStorage.getItem("gf_entry"));
-  const stop = parseFloat(localStorage.getItem("gf_stop"));
-  const timeframe = localStorage.getItem("gf_timeframe");
-
+// Advanced contract selection logic
+function chooseAdvancedContract(direction, score, entry, stop, target, timeframe, riskLevel) {
+  let notes = [];
   let contractType = "";
   let strike = "";
   let expiration = "";
 
-  if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days";
-  if (timeframe === "1h") expiration = "3–7 days";
-  if (timeframe === "4h") expiration = "1–2 weeks";
-  if (timeframe === "daily") expiration = "2–6 weeks";
+  // 1. Expiration logic (score + timeframe)
+  if (timeframe === "5m" || timeframe === "15m") {
+    expiration = score >= 8 ? "0DTE–2DTE" : "1–3 days";
+    notes.push("Short timeframe → short expiration.");
+  } else if (timeframe === "1h") {
+    expiration = score >= 8 ? "3–5 days" : "5–10 days";
+    notes.push("1h chart → weekly expirations preferred.");
+  } else if (timeframe === "4h") {
+    expiration = score >= 8 ? "1–2 weeks" : "2–4 weeks";
+    notes.push("4h chart → multi‑week expirations.");
+  } else if (timeframe === "daily") {
+    expiration = score >= 8 ? "2–4 weeks" : "4–8 weeks";
+    notes.push("Daily chart → swing‑length expirations.");
+  }
 
+  // 2. Delta targets based on risk
+  let deltaTarget = 0.50; // ATM baseline
+  if (riskLevel === "low") deltaTarget = 0.75; // Deep ITM
+  if (riskLevel === "medium") deltaTarget = 0.50; // ATM
+  if (riskLevel === "high") deltaTarget = 0.25; // OTM
+
+  notes.push(`Risk level → target delta ≈ ${deltaTarget}.`);
+
+  // 3. Strike selection based on direction + delta target
   if (direction === "bullish") {
-    contractType = "Call";
-    strike = entry.toFixed(2);
-  } else if (direction === "bearish") {
-    contractType = "Put";
-    strike = entry.toFixed(2);
+    if (deltaTarget >= 0.70) {
+      contractType = "Deep ITM Call";
+      strike = (entry * 0.94).toFixed(2);
+      notes.push("Deep ITM Call chosen for high delta and stability.");
+    } else if (deltaTarget >= 0.45) {
+      contractType = "ATM Call";
+      strike = entry.toFixed(2);
+      notes.push("ATM Call chosen for balanced exposure.");
+    } else {
+      contractType = "OTM Call";
+      strike = (entry * 1.03).toFixed(2);
+      notes.push("OTM Call chosen for leverage and lower cost.");
+    }
+  }
+
+  if (direction === "bearish") {
+    if (deltaTarget >= 0.70) {
+      contractType = "Deep ITM Put";
+      strike = (entry * 1.06).toFixed(2);
+      notes.push("Deep ITM Put chosen for high delta and stability.");
+    } else if (deltaTarget >= 0.45) {
+      contractType = "ATM Put";
+      strike = entry.toFixed(2);
+      notes.push("ATM Put chosen for balanced exposure.");
+    } else {
+      contractType = "OTM Put";
+      strike = (entry * 0.97).toFixed(2);
+      notes.push("OTM Put chosen for leverage and lower cost.");
+    }
+  }
+
+  // 4. R:R adjustment
+  const rr = Math.abs(target - entry) / Math.abs(entry - stop);
+  if (rr >= 2.5 && riskLevel !== "low") {
+    notes.push("High R:R detected → allowing slightly more OTM risk.");
+  }
+
+  return { contractType, strike, expiration, notes };
+}
+
+// Simple mode
+function chooseSimpleContract(direction, entry, timeframe) {
+  let expiration = "";
+  if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days";
+  else if (timeframe === "1h") expiration = "3–7 days";
+  else if (timeframe === "4h") expiration = "1–2 weeks";
+  else expiration = "2–6 weeks";
+
+  return {
+    contractType: direction === "bullish" ? "Call" : "Put",
+    strike: entry.toFixed(2),
+    expiration,
+    notes: ["Simple mode → ATM directional contract."]
+  };
+}
+
+function runOptions() {
+  const direction = localStorage.getItem("gf_direction");
+  const score = parseFloat(localStorage.getItem("gf_score"));
+  const entry = parseFloat(localStorage.getItem("gf_entry"));
+  const stop = parseFloat(localStorage.getItem("gf_stop"));
+  const target = parseFloat(localStorage.getItem("gf_target"));
+  const timeframe = localStorage.getItem("gf_timeframe");
+
+  const riskLevel = document.getElementById("riskLevel").value;
+  const advancedMode = document.getElementById("advancedMode").value;
+
+  let rec;
+
+  if (advancedMode === "off") {
+    rec = chooseSimpleContract(direction, entry, timeframe);
   } else {
-    contractType = "None";
-    strike = "N/A";
+    rec = chooseAdvancedContract(direction, score, entry, stop, target, timeframe, riskLevel);
   }
 
   document.getElementById("optionsOutput").innerHTML = `
     <div class="result">
-      <h3>Recommended Options Contract</h3>
-      <p><strong>Type:</strong> ${contractType}</p>
-      <p><strong>Strike:</strong> ${strike}</p>
-      <p><strong>Expiration:</strong> ${expiration}</p>
+      <h2>Recommended Options Contract</h2>
+      <p><strong>Type:</strong> ${rec.contractType}</p>
+      <p><strong>Strike:</strong> ${rec.strike}</p>
+      <p><strong>Expiration:</strong> ${rec.expiration}</p>
+      <h3>Reasoning</h3>
+      <ul>${rec.notes.map(n => `<li>${n}</li>`).join("")}</ul>
     </div>
   `;
 }
