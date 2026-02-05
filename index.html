@@ -4,22 +4,22 @@
 <meta charset="UTF-8">
 <title>Golden Formula – Setup Checker</title>
 <style>
-    body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:1000px; margin:0 auto; }
-    h2 { color:#ff2b6a; }
-    h3 { color:#ff9ac0; margin-top:25px; }
-    label { display:block; margin-top:8px; font-size:13px; }
-    input, select, textarea { padding:7px; margin-top:3px; width:100%; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
-    textarea { min-height:70px; font-family:monospace; }
-    button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
-    button:hover { background:#ff4c84; }
-    .section-box { border:1px solid #333; border-radius:6px; padding:10px; margin-top:10px; background:#0b0b12; }
-    .advanced-toggle { margin-top:20px; cursor:pointer; background:#11111a; border-radius:6px; padding:10px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
-    .advanced-content { display:none; margin-top:10px; }
-    canvas { background:#0f0f16; border:1px solid #333; border-radius:6px; margin-top:15px; width:100%; max-width:950px; }
-    .result { margin-top:20px; padding:15px; border-radius:8px; }
-    .strong { background:#123822; border:1px solid #1f8b4c; }
-    .decent { background:#3a3218; border:1px solid #8b6b1f; }
-    .weak { background:#3a1823; border:1px solid #8b1f3a; }
+  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:1000px; margin:0 auto; }
+  h2 { color:#ff2b6a; }
+  h3 { color:#ff9ac0; margin-top:25px; }
+  label { display:block; margin-top:8px; font-size:13px; }
+  input, select, textarea { padding:7px; margin-top:3px; width:100%; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
+  textarea { min-height:70px; font-family:monospace; }
+  button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
+  button:hover { background:#ff4c84; }
+  .section-box { border:1px solid #333; border-radius:6px; padding:10px; margin-top:10px; background:#0b0b12; }
+  .advanced-toggle { margin-top:20px; cursor:pointer; background:#11111a; border-radius:6px; padding:10px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
+  .advanced-content { display:none; margin-top:10px; }
+  canvas { background:#0f0f16; border:1px solid #333; border-radius:6px; margin-top:15px; width:100%; max-width:950px; }
+  .result { margin-top:20px; padding:15px; border-radius:8px; }
+  .strong { background:#123822; border:1px solid #1f8b4c; }
+  .decent { background:#3a3218; border:1px solid #8b6b1f; }
+  .weak { background:#3a1823; border:1px solid #8b1f3a; }
 </style>
 </head>
 <body>
@@ -27,69 +27,84 @@
 <h2>Golden Formula – Setup Checker & Simulator</h2>
 
 <div class="section-box">
-    <h3>Simple Mode</h3>
+  <h3>Simple Mode</h3>
 
-    <label>Timeframe</label>
-    <select id="timeframe">
-        <option>5m</option><option>15m</option><option>1h</option><option>4h</option><option>daily</option>
-    </select>
+  <label>Timeframe</label>
+  <select id="timeframe">
+    <option value="5m">5m</option>
+    <option value="15m">15m</option>
+    <option value="1h">1h</option>
+    <option value="4h">4h</option>
+    <option value="daily">daily</option>
+  </select>
 
-    <label>Current Price</label>
-    <input id="price" type="number" step="0.01">
+  <label>Current Price</label>
+  <input id="price" type="number" step="0.01">
 
-    <label>20 EMA</label>
-    <input id="ma20" type="number" step="0.01">
+  <label>20 EMA</label>
+  <input id="ma20" type="number" step="0.01">
 
-    <label>50 EMA</label>
-    <input id="ma50" type="number" step="0.01">
+  <label>50 EMA</label>
+  <input id="ma50" type="number" step="0.01">
 
-    <label>200 EMA</label>
-    <input id="ma200" type="number" step="0.01">
+  <label>200 EMA</label>
+  <input id="ma200" type="number" step="0.01">
 
-    <label>Even Level Reaction?</label>
-    <select id="even"><option value="no">No</option><option value="yes">Yes</option></select>
+  <label>Even Level Reaction?</label>
+  <select id="even">
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+  </select>
 
-    <label>Rounding Bottom?</label>
-    <select id="roundingSimple"><option value="no">No</option><option value="yes">Yes</option></select>
+  <label>Rounding Bottom?</label>
+  <select id="roundingSimple">
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+  </select>
 
-    <label>Double Bottom?</label>
-    <select id="doubleSimple"><option value="no">No</option><option value="yes">Yes</option></select>
+  <label>Double Bottom?</label>
+  <select id="doubleSimple">
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+  </select>
 
-    <label>Flag Pattern?</label>
-    <select id="flagTypeSimple"><option value="none">None</option><option value="bull">Bull Flag</option><option value="bear">Bear Flag</option></select>
+  <label>Flag Pattern?</label>
+  <select id="flagTypeSimple">
+    <option value="none">None</option>
+    <option value="bull">Bull Flag</option>
+    <option value="bear">Bear Flag</option>
+  </select>
 </div>
 
 <div class="advanced-toggle" onclick="toggleAdvanced()">
-    <span><strong>Advanced Mode (Optional)</strong></span>
-    <span id="advArrow">▼</span>
+  <span><strong>Advanced Mode (Optional)</strong></span>
+  <span id="advArrow">▼</span>
 </div>
 
 <div id="advancedSection" class="advanced-content">
+  <div class="section-box">
+    <h3>Advanced – Structure</h3>
+    <label>Support</label><input id="support" type="number" step="0.01">
+    <label>Resistance</label><input id="resistance" type="number" step="0.01">
+    <label>Swing Low</label><input id="swingLow" type="number" step="0.01">
+    <label>Swing High</label><input id="swingHigh" type="number" step="0.01">
+  </div>
 
-    <div class="section-box">
-        <h3>Advanced – Structure</h3>
-        <label>Support</label><input id="support" type="number">
-        <label>Resistance</label><input id="resistance" type="number">
-        <label>Swing Low</label><input id="swingLow" type="number">
-        <label>Swing High</label><input id="swingHigh" type="number">
-    </div>
+  <div class="section-box">
+    <h3>Advanced – Pattern Evidence</h3>
+    <label>Double Bottom 1</label><input id="dbBottom1" type="number" step="0.01">
+    <label>Double Bottom 2</label><input id="dbBottom2" type="number" step="0.01">
+    <label>Neckline</label><input id="dbNeckline" type="number" step="0.01">
 
-    <div class="section-box">
-        <h3>Advanced – Pattern Evidence</h3>
-        <label>Double Bottom 1</label><input id="dbBottom1" type="number">
-        <label>Double Bottom 2</label><input id="dbBottom2" type="number">
-        <label>Neckline</label><input id="dbNeckline" type="number">
+    <label>Rounding Low 1</label><input id="rbLow1" type="number" step="0.01">
+    <label>Rounding Low 2</label><input id="rbLow2" type="number" step="0.01">
+    <label>Rounding Low 3</label><input id="rbLow3" type="number" step="0.01">
+  </div>
 
-        <label>Rounding Low 1</label><input id="rbLow1" type="number">
-        <label>Rounding Low 2</label><input id="rbLow2" type="number">
-        <label>Rounding Low 3</label><input id="rbLow3" type="number">
-    </div>
-
-    <div class="section-box">
-        <h3>Advanced – Manual Candles</h3>
-        <textarea id="manualCandles"></textarea>
-    </div>
-
+  <div class="section-box">
+    <h3>Advanced – Manual Candles</h3>
+    <textarea id="manualCandles" placeholder="open,high,low,close per line"></textarea>
+  </div>
 </div>
 
 <button onclick="runApp()">Run Golden Formula</button>
@@ -101,161 +116,165 @@
 
 <script>
 function toggleAdvanced() {
-    const sec = document.getElementById("advancedSection");
-    const arrow = document.getElementById("advArrow");
-    sec.style.display = sec.style.display === "block" ? "none" : "block";
-    arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
+  const sec = document.getElementById("advancedSection");
+  const arrow = document.getElementById("advArrow");
+  sec.style.display = sec.style.display === "block" ? "none" : "block";
+  arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
 }
 
-/*  
-===========================================================
-FULL GOLDEN FORMULA LOGIC ENGINE  
-===========================================================
-*/
-
-/* ——— HELPER FUNCTIONS ——— */
 function nearEven(price) {
-    const levels = [5,10,25,50,100];
-    for (let base of levels) {
-        let lvl = Math.round(price / base) * base;
-        if (Math.abs(price - lvl) <= 0.25) return true;
-    }
-    return false;
+  const levels = [5,10,25,50,100];
+  for (let base of levels) {
+    let lvl = Math.round(price / base) * base;
+    if (Math.abs(price - lvl) <= 0.25) return true;
+  }
+  return false;
 }
 
 function parseManualCandles(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const candles = [];
-    for (let line of lines) {
-        const p = line.split(',').map(x => parseFloat(x.trim()));
-        if (p.length === 4 && p.every(v => !isNaN(v))) {
-            candles.push({open:p[0], high:p[1], low:p[2], close:p[3]});
-        }
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const candles = [];
+  for (let line of lines) {
+    const p = line.split(',').map(x => parseFloat(x.trim()));
+    if (p.length === 4 && p.every(v => !isNaN(v))) {
+      candles.push({open:p[0], high:p[1], low:p[2], close:p[3]});
     }
-    return candles;
+  }
+  return candles;
 }
 
-/* ——— AUTO CANDLE GENERATOR ——— */
 function autoGenerateLeftCandles(price, ma20, ma50, ma200, rounding, doubleBottom) {
-    const candles = [];
-    for (let i = 10; i > 0; i--) {
-        let t = i / 10;
-        let trendBias = price > ma20 && ma20 > ma50 && ma50 > ma200 ? 0.4 : -0.1;
-        let patternCurve = rounding ? -Math.cos(t * Math.PI) * 0.6 : 0;
-        if (doubleBottom) patternCurve += (t < 0.5 ? -0.4 : 0.4);
+  const candles = [];
+  for (let i = 10; i > 0; i--) {
+    let t = i / 10;
+    let trendBias = price > ma20 && ma20 > ma50 && ma50 > ma200 ? 0.4 : -0.1;
+    let patternCurve = rounding ? -Math.cos(t * Math.PI) * 0.6 : 0;
+    if (doubleBottom) patternCurve += (t < 0.5 ? -0.4 : 0.4);
 
-        let close = price - trendBias * i + patternCurve;
-        candles.unshift({
-            open: close - 0.2,
-            high: close + 0.4,
-            low: close - 0.4,
-            close
-        });
-    }
-    return candles;
-}
-
-/* ——— FUTURE SIMULATOR ——— */
-function simulateFuture(score, price, timeframe, rounding, doubleBottom) {
-    let candles = [];
-    let slope = score >= 8 ? 0.8 : score >= 4 ? 0.3 : -0.2;
-    let tfScale = timeframe === "daily" ? 0.3 : timeframe === "4h" ? 0.5 : 1;
-
-    for (let i = 0; i < 20; i++) {
-        let close = price +
-            slope * (i / 5) * tfScale +
-            (rounding ? Math.sin(i / 3) * 0.4 : 0) +
-            (doubleBottom && i > 5 ? (i - 5) * 0.1 : 0);
-
-        candles.push({
-            open: close - 0.2,
-            high: close + 0.5,
-            low: close - 0.5,
-            close
-        });
-    }
-    return candles;
-}
-
-/* ——— ENTRY & STOP ——— */
-function computeEntryStop(price, ma20, ma50, swingLow) {
-    let entry = (ma20 + ma50) / 2;
-    let stop = swingLow ? swingLow * 0.99 : price * 0.97;
-    return { entry: parseFloat(entry.toFixed(2)), stop: parseFloat(stop.toFixed(2)) };
-}
-
-/* ——— CHART DRAWER ——— */
-function drawChart(left, future) {
-    const canvas = document.getElementById("chart");
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    const all = left.concat(future);
-    let min = Math.min(...all.map(c => c.low));
-    let max = Math.max(...all.map(c => c.high));
-
-    const pad = 20;
-    const w = canvas.width;
-    const h = canvas.height;
-    const cw = (w - pad*2) / all.length;
-
-    function y(v) { return h - pad - ((v - min) / (max - min)) * (h - pad*2); }
-
-    all.forEach((c,i)=>{
-        const x = pad + i*cw + cw/2;
-        ctx.strokeStyle = c.close >= c.open ? "#3cff9d" : "#ff4c84";
-        ctx.fillStyle = ctx.strokeStyle;
-
-        ctx.beginPath();
-        ctx.moveTo(x, y(c.high));
-        ctx.lineTo(x, y(c.low));
-        ctx.stroke();
-
-        const top = y(Math.max(c.open,c.close));
-        const bot = y(Math.min(c.open,c.close));
-        ctx.fillRect(x - cw*0.3, top, cw*0.6, bot-top);
+    let close = price - trendBias * i + patternCurve;
+    candles.unshift({
+      open: close - 0.2,
+      high: close + 0.4,
+      low: close - 0.4,
+      close
     });
+  }
+  return candles;
 }
 
-/* ——— MAIN ——— */
+function simulateFuture(score, price, timeframe, rounding, doubleBottom) {
+  let candles = [];
+  let slope = score >= 8 ? 0.8 : score >= 4 ? 0.3 : -0.2;
+  let tfScale = timeframe === "daily" ? 0.3 : timeframe === "4h" ? 0.5 : 1;
+
+  for (let i = 0; i < 20; i++) {
+    let close = price +
+      slope * (i / 5) * tfScale +
+      (rounding ? Math.sin(i / 3) * 0.4 : 0) +
+      (doubleBottom && i > 5 ? (i - 5) * 0.1 : 0);
+
+    candles.push({
+      open: close - 0.2,
+      high: close + 0.5,
+      low: close - 0.5,
+      close
+    });
+  }
+  return candles;
+}
+
+function computeEntryStop(price, ma20, ma50, swingLow) {
+  let entry = (ma20 + ma50) / 2;
+  let stop = !isNaN(swingLow) ? swingLow * 0.99 : price * 0.97;
+  return { entry: parseFloat(entry.toFixed(2)), stop: parseFloat(stop.toFixed(2)) };
+}
+
+function drawChart(left, future) {
+  const canvas = document.getElementById("chart");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const all = left.concat(future);
+  if (!all.length) return;
+
+  let min = Math.min(...all.map(c => c.low));
+  let max = Math.max(...all.map(c => c.high));
+  if (max === min) { max += 1; min -= 1; }
+
+  const pad = 20;
+  const w = canvas.width;
+  const h = canvas.height;
+  const cw = (w - pad*2) / all.length;
+
+  function y(v) { return h - pad - ((v - min) / (max - min)) * (h - pad*2); }
+
+  ctx.fillStyle = "#0f0f16";
+  ctx.fillRect(0,0,w,h);
+
+  all.forEach((c,i)=>{
+    const x = pad + i*cw + cw/2;
+    ctx.strokeStyle = c.close >= c.open ? "#3cff9d" : "#ff4c84";
+    ctx.fillStyle = ctx.strokeStyle;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y(c.high));
+    ctx.lineTo(x, y(c.low));
+    ctx.stroke();
+
+    const top = y(Math.max(c.open,c.close));
+    const bot = y(Math.min(c.open,c.close));
+    const bh = Math.max(2, bot-top);
+    ctx.fillRect(x - cw*0.3, top, cw*0.6, bh);
+  });
+}
+
 function runApp() {
-    const price = parseFloat(price.value);
-    const ma20v = parseFloat(ma20.value);
-    const ma50v = parseFloat(ma50.value);
-    const ma200v = parseFloat(ma200.value);
-    const timeframeVal = timeframe.value;
+  const priceVal = parseFloat(document.getElementById("price").value);
+  const ma20Val = parseFloat(document.getElementById("ma20").value);
+  const ma50Val = parseFloat(document.getElementById("ma50").value);
+  const ma200Val = parseFloat(document.getElementById("ma200").value);
+  const timeframeVal = document.getElementById("timeframe").value;
 
-    const rounding = roundingSimple.value === "yes";
-    const doubleBottom = doubleSimple.value === "yes";
+  if ([priceVal, ma20Val, ma50Val, ma200Val].some(v => isNaN(v))) {
+    document.getElementById("output").innerHTML = "<p>Please fill price and all EMAs.</p>";
+    return;
+  }
 
-    let score = 0;
-    if (price > ma20v && ma20v > ma50v && ma50v > ma200v) score += 3;
-    if (rounding) score += 2;
-    if (doubleBottom) score += 2;
-    if (nearEven(price)) score += 2;
+  const rounding = document.getElementById("roundingSimple").value === "yes";
+  const doubleBottom = document.getElementById("doubleSimple").value === "yes";
 
-    const leftCandles = parseManualCandles(manualCandles.value).length ?
-        parseManualCandles(manualCandles.value) :
-        autoGenerateLeftCandles(price, ma20v, ma50v, ma200v, rounding, doubleBottom);
+  let score = 0;
+  if (priceVal > ma20Val && ma20Val > ma50Val && ma50Val > ma200Val) score += 3;
+  if (rounding) score += 2;
+  if (doubleBottom) score += 2;
+  if (nearEven(priceVal)) score += 2;
 
-    const futureCandles = simulateFuture(score, price, timeframeVal, rounding, doubleBottom);
+  const manualText = document.getElementById("manualCandles").value;
+  let leftCandles = parseManualCandles(manualText);
+  if (!leftCandles.length) {
+    leftCandles = autoGenerateLeftCandles(priceVal, ma20Val, ma50Val, ma200Val, rounding, doubleBottom);
+  }
 
-    drawChart(leftCandles, futureCandles);
+  const futureCandles = simulateFuture(score, priceVal, timeframeVal, rounding, doubleBottom);
+  drawChart(leftCandles, futureCandles);
 
-    const es = computeEntryStop(price, ma20v, ma50v, parseFloat(swingLow.value));
+  const swingLowVal = parseFloat(document.getElementById("swingLow").value);
+  const es = computeEntryStop(priceVal, ma20Val, ma50Val, swingLowVal);
 
-    let verdict = score >= 8 ? "🔥 Strong Setup" :
-                  score >= 4 ? "⚠️ Decent Setup" :
-                  "❌ Weak Setup";
+  let verdict = score >= 8 ? "🔥 Strong Setup" :
+                score >= 4 ? "⚠️ Decent Setup" :
+                "❌ Weak Setup";
 
-    document.getElementById("output").innerHTML = `
-        <div class="result ${score>=8?'strong':score>=4?'decent':'weak'}">
-            <h3>${verdict}</h3>
-            <p><strong>Score:</strong> ${score}</p>
-            <p><strong>Suggested Entry:</strong> ${es.entry}</p>
-            <p><strong>Suggested Stop:</strong> ${es.stop}</p>
-        </div>
-    `;
+  const cls = score >= 8 ? "strong" : score >= 4 ? "decent" : "weak";
+
+  document.getElementById("output").innerHTML = `
+    <div class="result ${cls}">
+      <h3>${verdict}</h3>
+      <p><strong>Score:</strong> ${score}</p>
+      <p><strong>Suggested Entry:</strong> ${es.entry}</p>
+      <p><strong>Suggested Stop:</strong> ${es.stop}</p>
+    </div>
+  `;
 }
 </script>
 
