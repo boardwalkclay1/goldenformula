@@ -56,16 +56,18 @@
     <option value="yes">Yes</option>
   </select>
 
-  <label>Rounding Bottom?</label>
+  <label>Rounding Bottom / Top?</label>
   <select id="roundingSimple">
-    <option value="no">No</option>
-    <option value="yes">Yes</option>
+    <option value="none">None</option>
+    <option value="bottom">Rounding Bottom</option>
+    <option value="top">Rounding Top</option>
   </select>
 
-  <label>Double Bottom?</label>
+  <label>Double Bottom / Top?</label>
   <select id="doubleSimple">
-    <option value="no">No</option>
-    <option value="yes">Yes</option>
+    <option value="none">None</option>
+    <option value="bottom">Double Bottom</option>
+    <option value="top">Double Top</option>
   </select>
 
   <label>Flag Pattern?</label>
@@ -143,15 +145,12 @@ function parseManualCandles(text) {
   return candles;
 }
 
-function autoGenerateLeftCandles(price, ma20, ma50, ma200, rounding, doubleBottom) {
+function autoGenerateLeftCandles(price, direction) {
   const candles = [];
   for (let i = 10; i > 0; i--) {
     let t = i / 10;
-    let trendBias = price > ma20 && ma20 > ma50 && ma50 > ma200 ? 0.4 : -0.1;
-    let patternCurve = rounding ? -Math.cos(t * Math.PI) * 0.6 : 0;
-    if (doubleBottom) patternCurve += (t < 0.5 ? -0.4 : 0.4);
-
-    let close = price - trendBias * i + patternCurve;
+    let trendBias = direction === "bullish" ? 0.4 : direction === "bearish" ? -0.4 : 0;
+    let close = price - trendBias * i;
     candles.unshift({
       open: close - 0.2,
       high: close + 0.4,
@@ -162,17 +161,16 @@ function autoGenerateLeftCandles(price, ma20, ma50, ma200, rounding, doubleBotto
   return candles;
 }
 
-function simulateFuture(score, price, timeframe, rounding, doubleBottom) {
+function simulateFuture(score, price, timeframe, direction) {
   let candles = [];
-  let slope = score >= 8 ? 0.8 : score >= 4 ? 0.3 : -0.2;
+  let baseSlope = score >= 8 ? 0.8 : score >= 4 ? 0.3 : 0.1;
+  if (direction === "bearish") baseSlope *= -1;
+  if (direction === "neutral") baseSlope = 0;
+
   let tfScale = timeframe === "daily" ? 0.3 : timeframe === "4h" ? 0.5 : 1;
 
   for (let i = 0; i < 20; i++) {
-    let close = price +
-      slope * (i / 5) * tfScale +
-      (rounding ? Math.sin(i / 3) * 0.4 : 0) +
-      (doubleBottom && i > 5 ? (i - 5) * 0.1 : 0);
-
+    let close = price + baseSlope * (i / 5) * tfScale;
     candles.push({
       open: close - 0.2,
       high: close + 0.5,
@@ -183,9 +181,18 @@ function simulateFuture(score, price, timeframe, rounding, doubleBottom) {
   return candles;
 }
 
-function computeEntryStop(price, ma20, ma50, swingLow) {
-  let entry = (ma20 + ma50) / 2;
-  let stop = !isNaN(swingLow) ? swingLow * 0.99 : price * 0.97;
+function computeEntryStop(price, ma20, ma50, swingLow, swingHigh, direction) {
+  let entry, stop;
+  if (direction === "bullish") {
+    entry = (ma20 + ma50) / 2;
+    stop = !isNaN(swingLow) ? swingLow * 0.99 : price * 0.97;
+  } else if (direction === "bearish") {
+    entry = (ma20 + ma50) / 2;
+    stop = !isNaN(swingHigh) ? swingHigh * 1.01 : price * 1.03;
+  } else {
+    entry = price;
+    stop = price;
+  }
   return { entry: parseFloat(entry.toFixed(2)), stop: parseFloat(stop.toFixed(2)) };
 }
 
@@ -240,36 +247,87 @@ function runApp() {
     return;
   }
 
-  const rounding = document.getElementById("roundingSimple").value === "yes";
-  const doubleBottom = document.getElementById("doubleSimple").value === "yes";
+  const roundingSel = document.getElementById("roundingSimple").value;
+  const doubleSel = document.getElementById("doubleSimple").value;
+  const flagSel = document.getElementById("flagTypeSimple").value;
+  const evenSel = document.getElementById("even").value;
 
-  let score = 0;
-  if (priceVal > ma20Val && ma20Val > ma50Val && ma50Val > ma200Val) score += 3;
-  if (rounding) score += 2;
-  if (doubleBottom) score += 2;
-  if (nearEven(priceVal)) score += 2;
+  const supportVal = parseFloat(document.getElementById("support").value);
+  const resistanceVal = parseFloat(document.getElementById("resistance").value);
+  const swingLowVal = parseFloat(document.getElementById("swingLow").value);
+  const swingHighVal = parseFloat(document.getElementById("swingHigh").value);
 
+  // Trend direction from EMAs
+  let trendScoreBull = 0;
+  let trendScoreBear = 0;
+
+  if (priceVal > ma20Val && ma20Val > ma50Val && ma50Val > ma200Val) trendScoreBull += 3;
+  if (priceVal < ma20Val && ma20Val < ma50Val && ma50Val < ma200Val) trendScoreBear += 3;
+
+  // Patterns
+  if (roundingSel === "bottom") trendScoreBull += 2;
+  if (roundingSel === "top") trendScoreBear += 2;
+
+  if (doubleSel === "bottom") trendScoreBull += 2;
+  if (doubleSel === "top") trendScoreBear += 2;
+
+  if (flagSel === "bull") trendScoreBull += 2;
+  if (flagSel === "bear") trendScoreBear += 2;
+
+  // Even level
+  if (evenSel === "yes" && nearEven(priceVal)) {
+    if (priceVal >= ma20Val) trendScoreBull += 1;
+    if (priceVal <= ma20Val) trendScoreBear += 1;
+  }
+
+  // Structure
+  if (!isNaN(supportVal) && priceVal > supportVal && priceVal - supportVal <= (priceVal * 0.01)) {
+    trendScoreBull += 2;
+  }
+  if (!isNaN(resistanceVal) && priceVal < resistanceVal && resistanceVal - priceVal <= (priceVal * 0.01)) {
+    trendScoreBear += 2;
+  }
+
+  // Final direction
+  let direction = "neutral";
+  if (trendScoreBull > trendScoreBear && trendScoreBull >= 3) direction = "bullish";
+  if (trendScoreBear > trendScoreBull && trendScoreBear >= 3) direction = "bearish";
+
+  // Score = max of the two
+  let score = Math.max(trendScoreBull, trendScoreBear);
+  if (score > 10) score = 10;
+
+  // Candles
   const manualText = document.getElementById("manualCandles").value;
   let leftCandles = parseManualCandles(manualText);
   if (!leftCandles.length) {
-    leftCandles = autoGenerateLeftCandles(priceVal, ma20Val, ma50Val, ma200Val, rounding, doubleBottom);
+    leftCandles = autoGenerateLeftCandles(priceVal, direction);
   }
 
-  const futureCandles = simulateFuture(score, priceVal, timeframeVal, rounding, doubleBottom);
+  const futureCandles = simulateFuture(score, priceVal, timeframeVal, direction);
   drawChart(leftCandles, futureCandles);
 
-  const swingLowVal = parseFloat(document.getElementById("swingLow").value);
-  const es = computeEntryStop(priceVal, ma20Val, ma50Val, swingLowVal);
+  const es = computeEntryStop(priceVal, ma20Val, ma50Val, swingLowVal, swingHighVal, direction);
 
-  let verdict = score >= 8 ? "🔥 Strong Setup" :
-                score >= 4 ? "⚠️ Decent Setup" :
-                "❌ Weak Setup";
+  let verdict;
+  if (direction === "bullish") {
+    verdict = score >= 8 ? "🔥 Strong Bullish Setup (CALL bias)" :
+              score >= 4 ? "⚠️ Decent Bullish Setup (CALL bias)" :
+              "❌ Weak Bullish Edge";
+  } else if (direction === "bearish") {
+    verdict = score >= 8 ? "🔥 Strong Bearish Setup (PUT bias)" :
+              score >= 4 ? "⚠️ Decent Bearish Setup (PUT bias)" :
+              "❌ Weak Bearish Edge";
+  } else {
+    verdict = "❌ No Clear Direction";
+  }
 
   const cls = score >= 8 ? "strong" : score >= 4 ? "decent" : "weak";
 
   document.getElementById("output").innerHTML = `
     <div class="result ${cls}">
       <h3>${verdict}</h3>
+      <p><strong>Direction:</strong> ${direction}</p>
       <p><strong>Score:</strong> ${score}</p>
       <p><strong>Suggested Entry:</strong> ${es.entry}</p>
       <p><strong>Suggested Stop:</strong> ${es.stop}</p>
