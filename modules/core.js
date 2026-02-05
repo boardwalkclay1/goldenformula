@@ -53,6 +53,86 @@ export function parseChartText(raw) {
 }
 
 // ------------------------------
+// GOLDEN FORMULA ENGINE
+// ------------------------------
+export function runGoldenFormula(data, pattern, reversal, evenReaction) {
+  const notes = [];
+  let direction = "none";
+
+  const { price, maFast, maSlow, ma200, dayHigh, dayLow } = data;
+
+  if ([price, maFast, maSlow].some(v => v == null || isNaN(v))) {
+    notes.push("Price and both moving averages must be readable.");
+    return { direction: "none", valid: false, entry: "", stop: "", notes };
+  }
+
+  if (maFast > maSlow && price > maFast) {
+    direction = "call";
+    notes.push("Fast moving average is above slow and price is above both → up move.");
+  } else if (maFast < maSlow && price < maFast) {
+    direction = "put";
+    notes.push("Fast moving average is below slow and price is below both → down move.");
+  } else {
+    notes.push("Moving averages do not clearly show up or down.");
+  }
+
+  if (!isNaN(ma200)) {
+    if (maFast > maSlow && maFast > ma200) notes.push("Fast above slow and long → golden cross style uptrend.");
+    if (maFast < maSlow && maFast < ma200) notes.push("Fast below slow and long → death cross style downtrend.");
+  }
+
+  const diff = Math.abs(maFast - maSlow);
+  if (diff <= price * 0.005) notes.push("Fast and slow moving averages are very close → a cross may be coming.");
+
+  let patternOk = false;
+  if (direction === "call" && (pattern === "doubleBottom" || pattern === "roundingBottom")) {
+    patternOk = true; notes.push("Obvious bottom pattern marked.");
+  }
+  if (direction === "put" && (pattern === "doubleTop" || pattern === "roundingTop")) {
+    patternOk = true; notes.push("Obvious top pattern marked.");
+  }
+  if (!patternOk) notes.push("Pattern does not clearly match the direction.");
+
+  if (reversal === "yes") notes.push("Strong reversal candle at the turning point.");
+  else notes.push("No strong reversal candle confirmed.");
+
+  if (evenReaction === "yes") {
+    const level = nearestEven(price);
+    notes.push("Price reacted at a clean even number around " + level + ".");
+  } else {
+    notes.push("No clear reaction at an even number.");
+  }
+
+  if (!isNaN(dayHigh) && !isNaN(dayLow)) {
+    const range = dayHigh - dayLow;
+    if (range > 0) {
+      const pos = (price - dayLow) / range;
+      if (pos < 0.2) notes.push("Price is near the low of the day → could be a bottom area.");
+      else if (pos > 0.8) notes.push("Price is near the high of the day → could be a top area.");
+    }
+  }
+
+  const valid = (direction !== "none" && patternOk && reversal === "yes" && evenReaction === "yes");
+  let entry = "", stop = "";
+
+  if (valid) {
+    if (direction === "call") {
+      entry = nextEvenUp(price);
+      stop = (entry * 0.8).toFixed(2);
+      notes.push("CALL idea. Enter at the next even number above: " + entry + ".");
+      notes.push("Stop loss is 20% below entry: " + stop + ".");
+    } else {
+      entry = nextEvenDown(price);
+      stop = (entry * 1.2).toFixed(2);
+      notes.push("PUT idea. Enter at the next even number below: " + entry + ".");
+      notes.push("Stop loss is 20% above entry: " + stop + ".");
+    }
+  }
+
+  return { direction, valid, entry, stop, notes };
+}
+
+// ------------------------------
 // OPTIONS CHAIN PARSER
 // ------------------------------
 export function parseChainLoose(text) {
@@ -63,11 +143,11 @@ export function parseChainLoose(text) {
     const parts = line.split(/[\s,|]+/).filter(x => x.length);
     const nums = parts.map(x => parseFloat(x)).filter(x => !isNaN(x));
     if (nums.length >= 5) {
-      const strike = nums[0];
+      const strike  = nums[0];
       const callBid = nums[1];
       const callAsk = nums[2];
-      const putBid = nums[3];
-      const putAsk = nums[4];
+      const putBid  = nums[3];
+      const putAsk  = nums[4];
       rows.push({ strike, callBid, callAsk, putBid, putAsk });
     }
   });
