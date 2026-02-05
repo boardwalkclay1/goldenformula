@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <title>Options Contract Selector</title>
 <style>
-    body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:800px; margin:0 auto; }
-    h2 { color:#ff2b6a; }
-    h3 { color:#ff9ac0; margin-top:25px; }
-    label { display:block; margin-top:8px; font-size:13px; }
-    select { padding:7px; width:100%; background:#15151b; color:#fff; border:1px solid #333; border-radius:4px; }
-    button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
-    button:hover { background:#ff4c84; }
-    .section-box { border:1px solid #333; border-radius:6px; padding:10px; margin-top:10px; background:#0b0b12; }
-    .advanced-toggle { margin-top:20px; cursor:pointer; background:#11111a; border-radius:6px; padding:10px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
-    .advanced-content { display:none; margin-top:10px; }
-    .result { margin-top:20px; padding:15px; border-radius:8px; background:#123822; border:1px solid #1f8b4c; }
+  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:800px; margin:0 auto; }
+  h2 { color:#ff2b6a; }
+  h3 { color:#ff9ac0; margin-top:25px; }
+  label { display:block; margin-top:8px; font-size:13px; }
+  select { padding:7px; width:100%; background:#15151b; color:#fff; border:1px solid #333; border-radius:4px; }
+  button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
+  button:hover { background:#ff4c84; }
+  .section-box { border:1px solid #333; border-radius:6px; padding:10px; margin-top:10px; background:#0b0b12; }
+  .advanced-toggle { margin-top:20px; cursor:pointer; background:#11111a; border-radius:6px; padding:10px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
+  .advanced-content { display:none; margin-top:10px; }
+  .result { margin-top:20px; padding:15px; border-radius:8px; background:#123822; border:1px solid #1f8b4c; }
 </style>
 </head>
 <body>
@@ -22,25 +22,25 @@
 <h2>Options Contract Selector</h2>
 
 <div class="section-box">
-    <label>Risk Level</label>
-    <select id="riskLevel">
-        <option value="low">Low</option>
-        <option value="medium">Medium</option>
-        <option value="high">High</option>
+  <label>Risk Level</label>
+  <select id="riskLevel">
+    <option value="low">Low</option>
+    <option value="medium">Medium</option>
+    <option value="high">High</option>
+  </select>
+
+  <div class="advanced-toggle" onclick="toggleOptionsAdvanced()">
+    <span><strong>Advanced Options Strategies (Optional)</strong></span>
+    <span id="optArrow">▼</span>
+  </div>
+
+  <div id="optionsAdvanced" class="advanced-content">
+    <label>Enable Advanced Strategies?</label>
+    <select id="enableAdvancedOptions">
+      <option value="no">No (Calls & Puts Only)</option>
+      <option value="yes">Yes (Deep ITM, ATM, OTM)</option>
     </select>
-
-    <div class="advanced-toggle" onclick="toggleOptionsAdvanced()">
-        <span><strong>Advanced Options Strategies (Optional)</strong></span>
-        <span id="optArrow">▼</span>
-    </div>
-
-    <div id="optionsAdvanced" class="advanced-content">
-        <label>Enable Advanced Strategies?</label>
-        <select id="enableAdvancedOptions">
-            <option value="no">No (Calls & Puts Only)</option>
-            <option value="yes">Yes (Deep ITM, ATM, OTM)</option>
-        </select>
-    </div>
+  </div>
 </div>
 
 <button onclick="runOptions()">Generate Options Recommendation</button>
@@ -51,41 +51,75 @@
 
 <script>
 function toggleOptionsAdvanced() {
-    const sec = document.getElementById("optionsAdvanced");
-    const arrow = document.getElementById("optArrow");
-    sec.style.display = sec.style.display === "block" ? "none" : "block";
-    arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
+  const sec = document.getElementById("optionsAdvanced");
+  const arrow = document.getElementById("optArrow");
+  sec.style.display = sec.style.display === "block" ? "none" : "block";
+  arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
 }
 
 function chooseOptionsContract(score, entry, stop, timeframe, riskLevel, advancedEnabled) {
-    let direction = score >= 8 ? "bullish" : score <= 3 ? "bearish" : "neutral";
-    let contractType = "None";
-    let strike = "N/A";
-    let expiration = "N/A";
-    let reasons = [];
+  let direction = score >= 8 ? "bullish" : score <= 3 ? "bearish" : "neutral";
+  let contractType = "None";
+  let strike = "N/A";
+  let expiration = "N/A";
+  let reasons = [];
 
-    if (direction === "neutral") {
-        reasons.push("Setup not strong enough for directional options.");
-        return { contractType, strike, expiration, reasons };
-    }
+  if (direction === "neutral") {
+    reasons.push("Setup not strong enough for directional options.");
+    return { contractType, strike, expiration, reasons };
+  }
 
-    if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days";
-    if (timeframe === "1h") expiration = "3–7 days";
-    if (timeframe === "4h") expiration = "1–2 weeks";
-    if (timeframe === "daily") expiration = "2–6 weeks";
+  if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days";
+  if (timeframe === "1h") expiration = "3–7 days";
+  if (timeframe === "4h") expiration = "1–2 weeks";
+  if (timeframe === "daily") expiration = "2–6 weeks";
 
-    if (advancedEnabled === "no") {
-        contractType = direction === "bullish" ? "Call" : "Put";
-        strike = entry.toFixed(2);
-        reasons.push("Simple mode: Calls & Puts only.");
-        return { contractType, strike, expiration, reasons };
-    }
+  if (advancedEnabled === "no") {
+    contractType = direction === "bullish" ? "Call" : "Put";
+    strike = entry.toFixed(2);
+    reasons.push("Simple mode: Calls & Puts only.");
+    return { contractType, strike, expiration, reasons };
+  }
 
-    if (direction === "bullish") {
-        if (riskLevel === "low") { contractType = "Deep ITM Call"; strike = (entry * 0.95).toFixed(2); }
-        if (riskLevel === "medium") { contractType = "ATM Call"; strike = entry.toFixed(2); }
-        if (riskLevel === "high") { contractType = "OTM Call"; strike = (entry * 1.03).toFixed(2); }
-    }
+  if (direction === "bullish") {
+    if (riskLevel === "low") { contractType = "Deep ITM Call"; strike = (entry * 0.95).toFixed(2); reasons.push("Low risk → Deep ITM Call."); }
+    if (riskLevel === "medium") { contractType = "ATM Call"; strike = entry.toFixed(2); reasons.push("Medium risk → ATM Call."); }
+    if (riskLevel === "high") { contractType = "OTM Call"; strike = (entry * 1.03).toFixed(2); reasons.push("High risk → OTM Call."); }
+  }
 
-    if (direction === "bearish") {
-        if (riskLevel ===
+  if (direction === "bearish") {
+    if (riskLevel === "low") { contractType = "Deep ITM Put"; strike = (entry * 1.05).toFixed(2); reasons.push("Low risk → Deep ITM Put."); }
+    if (riskLevel === "medium") { contractType = "ATM Put"; strike = entry.toFixed(2); reasons.push("Medium risk → ATM Put."); }
+    if (riskLevel === "high") { contractType = "OTM Put"; strike = (entry * 0.97).toFixed(2); reasons.push("High risk → OTM Put."); }
+  }
+
+  reasons.push("Advanced mode enabled.");
+  return { contractType, strike, expiration, reasons };
+}
+
+function runOptions() {
+  const risk = document.getElementById("riskLevel").value;
+  const adv = document.getElementById("enableAdvancedOptions").value;
+
+  // For now, these are static. You can later pass real values via URL/localStorage.
+  const score = 9;
+  const entry = 100;
+  const stop = 97;
+  const timeframe = "1h";
+
+  const rec = chooseOptionsContract(score, entry, stop, timeframe, risk, adv);
+
+  document.getElementById("optionsOutput").innerHTML = `
+    <div class="result">
+      <h3>Recommended Contract</h3>
+      <p><strong>Type:</strong> ${rec.contractType}</p>
+      <p><strong>Strike:</strong> ${rec.strike}</p>
+      <p><strong>Expiration:</strong> ${rec.expiration}</p>
+      <ul>${rec.reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
