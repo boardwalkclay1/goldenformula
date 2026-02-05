@@ -8,12 +8,9 @@
   h2 { color:#ff2b6a; }
   h3 { color:#ff9ac0; margin-top:25px; }
   label { display:block; margin-top:8px; font-size:13px; }
-  input, select { padding:7px; width:100%; background:#15151b; color:#fff; border:1px solid #333; border-radius:4px; margin-top:3px; }
+  select { padding:7px; width:100%; background:#15151b; color:#fff; border:1px solid #333; border-radius:4px; }
   button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
-  .section-box { border:1px solid #333; border-radius:6px; padding:10px; margin-top:10px; background:#0b0b12; }
-  .advanced-toggle { margin-top:20px; cursor:pointer; background:#11111a; border-radius:6px; padding:10px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
-  .advanced-content { display:none; margin-top:10px; }
   .result { margin-top:20px; padding:15px; border-radius:8px; background:#123822; border:1px solid #1f8b4c; }
 </style>
 </head>
@@ -21,57 +18,7 @@
 
 <h2>Options Contract Selector</h2>
 
-<div class="section-box">
-  <h3>Inputs from Golden Formula</h3>
-
-  <label>Direction</label>
-  <select id="direction">
-    <option value="bullish">Bullish (CALL bias)</option>
-    <option value="bearish">Bearish (PUT bias)</option>
-  </select>
-
-  <label>Setup Score (0–10)</label>
-  <input id="score" type="number" min="0" max="10" step="1">
-
-  <label>Timeframe</label>
-  <select id="timeframe">
-    <option value="5m">5m</option>
-    <option value="15m">15m</option>
-    <option value="1h">1h</option>
-    <option value="4h">4h</option>
-    <option value="daily">daily</option>
-  </select>
-
-  <label>Entry Price</label>
-  <input id="entry" type="number" step="0.01">
-
-  <label>Stop Price</label>
-  <input id="stop" type="number" step="0.01">
-</div>
-
-<div class="section-box">
-  <h3>Risk & Strategy</h3>
-
-  <label>Risk Level</label>
-  <select id="riskLevel">
-    <option value="low">Low</option>
-    <option value="medium">Medium</option>
-    <option value="high">High</option>
-  </select>
-
-  <div class="advanced-toggle" onclick="toggleOptionsAdvanced()">
-    <span><strong>Advanced Options Strategies (Optional)</strong></span>
-    <span id="optArrow">▼</span>
-  </div>
-
-  <div id="optionsAdvanced" class="advanced-content">
-    <label>Enable Advanced Strategies?</label>
-    <select id="enableAdvancedOptions">
-      <option value="no">No (Calls & Puts Only)</option>
-      <option value="yes">Yes (Deep ITM, ATM, OTM)</option>
-    </select>
-  </div>
-</div>
+<div id="formulaData"></div>
 
 <button onclick="runOptions()">Generate Options Recommendation</button>
 
@@ -80,112 +27,63 @@
 <button onclick="window.location.href='index.html'">← Back to Golden Formula</button>
 
 <script>
-function toggleOptionsAdvanced() {
-  const sec = document.getElementById("optionsAdvanced");
-  const arrow = document.getElementById("optArrow");
-  sec.style.display = sec.style.display === "block" ? "none" : "block";
-  arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
+function loadFormulaData() {
+  const direction = localStorage.getItem("gf_direction");
+  const score = localStorage.getItem("gf_score");
+  const entry = localStorage.getItem("gf_entry");
+  const stop = localStorage.getItem("gf_stop");
+  const timeframe = localStorage.getItem("gf_timeframe");
+
+  document.getElementById("formulaData").innerHTML = `
+    <div class="result">
+      <h3>Golden Formula Output</h3>
+      <p><strong>Direction:</strong> ${direction}</p>
+      <p><strong>Score:</strong> ${score}</p>
+      <p><strong>Entry:</strong> ${entry}</p>
+      <p><strong>Stop:</strong> ${stop}</p>
+      <p><strong>Timeframe:</strong> ${timeframe}</p>
+    </div>
+  `;
 }
 
-function chooseOptionsContract(score, direction, entry, stop, timeframe, riskLevel, advancedEnabled) {
-  let contractType = "None";
-  let strike = "N/A";
-  let expiration = "N/A";
-  let reasons = [];
+function runOptions() {
+  const direction = localStorage.getItem("gf_direction");
+  const score = parseInt(localStorage.getItem("gf_score"));
+  const entry = parseFloat(localStorage.getItem("gf_entry"));
+  const stop = parseFloat(localStorage.getItem("gf_stop"));
+  const timeframe = localStorage.getItem("gf_timeframe");
 
-  // Guard: weak setup
-  if (score <= 3) {
-    reasons.push("Setup score is weak; no aggressive options suggested.");
-  }
+  let contractType = "";
+  let strike = "";
+  let expiration = "";
 
-  // Expiration from timeframe
   if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days";
   if (timeframe === "1h") expiration = "3–7 days";
   if (timeframe === "4h") expiration = "1–2 weeks";
   if (timeframe === "daily") expiration = "2–6 weeks";
 
-  if (advancedEnabled === "no") {
-    // Simple: just Calls or Puts at entry
-    if (direction === "bullish") {
-      contractType = "Call";
-      reasons.push("Bullish bias → Call option.");
-    } else if (direction === "bearish") {
-      contractType = "Put";
-      reasons.push("Bearish bias → Put option.");
-    } else {
-      reasons.push("No clear direction; cannot choose Call or Put.");
-    }
-    if (direction === "bullish" || direction === "bearish") {
-      strike = entry.toFixed(2);
-    }
-    reasons.push("Simple mode: Calls & Puts only.");
-    return { contractType, strike, expiration, reasons };
-  }
-
-  // Advanced: Deep ITM / ATM / OTM based on risk, mirrored for bull/bear
   if (direction === "bullish") {
-    if (riskLevel === "low") {
-      contractType = "Deep ITM Call";
-      strike = (entry * 0.95).toFixed(2);
-      reasons.push("Low risk → Deep ITM Call for higher delta and stability.");
-    } else if (riskLevel === "medium") {
-      contractType = "ATM Call";
-      strike = entry.toFixed(2);
-      reasons.push("Medium risk → ATM Call for balanced risk/reward.");
-    } else {
-      contractType = "OTM Call";
-      strike = (entry * 1.03).toFixed(2);
-      reasons.push("High risk → OTM Call for higher reward potential.");
-    }
+    contractType = "Call";
+    strike = entry.toFixed(2);
   } else if (direction === "bearish") {
-    if (riskLevel === "low") {
-      contractType = "Deep ITM Put";
-      strike = (entry * 1.05).toFixed(2);
-      reasons.push("Low risk → Deep ITM Put for higher delta and stability.");
-    } else if (riskLevel === "medium") {
-      contractType = "ATM Put";
-      strike = entry.toFixed(2);
-      reasons.push("Medium risk → ATM Put for balanced risk/reward.");
-    } else {
-      contractType = "OTM Put";
-      strike = (entry * 0.97).toFixed(2);
-      reasons.push("High risk → OTM Put for higher reward potential.");
-    }
+    contractType = "Put";
+    strike = entry.toFixed(2);
   } else {
-    reasons.push("No clear direction; cannot choose advanced Call/Put.");
+    contractType = "None";
+    strike = "N/A";
   }
-
-  reasons.push("Advanced mode enabled (Deep ITM / ATM / OTM).");
-  return { contractType, strike, expiration, reasons };
-}
-
-function runOptions() {
-  const direction = document.getElementById("direction").value;
-  const scoreVal = parseInt(document.getElementById("score").value, 10);
-  const timeframe = document.getElementById("timeframe").value;
-  const entryVal = parseFloat(document.getElementById("entry").value);
-  const stopVal = parseFloat(document.getElementById("stop").value);
-  const risk = document.getElementById("riskLevel").value;
-  const adv = document.getElementById("enableAdvancedOptions").value;
-
-  if (isNaN(scoreVal) || isNaN(entryVal) || isNaN(stopVal)) {
-    document.getElementById("optionsOutput").innerHTML = "<p>Please fill score, entry, and stop.</p>";
-    return;
-  }
-
-  const rec = chooseOptionsContract(scoreVal, direction, entryVal, stopVal, timeframe, risk, adv);
 
   document.getElementById("optionsOutput").innerHTML = `
     <div class="result">
-      <h3>Recommended Contract</h3>
-      <p><strong>Direction:</strong> ${direction}</p>
-      <p><strong>Type:</strong> ${rec.contractType}</p>
-      <p><strong>Strike:</strong> ${rec.strike}</p>
-      <p><strong>Expiration:</strong> ${rec.expiration}</p>
-      <ul>${rec.reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+      <h3>Recommended Options Contract</h3>
+      <p><strong>Type:</strong> ${contractType}</p>
+      <p><strong>Strike:</strong> ${strike}</p>
+      <p><strong>Expiration:</strong> ${expiration}</p>
     </div>
   `;
 }
+
+loadFormulaData();
 </script>
 
 </body>
