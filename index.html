@@ -26,7 +26,6 @@
 
 <h2>Golden Formula – Setup Checker & Simulator</h2>
 
-<!-- SIMPLE MODE -->
 <div class="section-box">
     <h3>Simple Mode</h3>
 
@@ -60,7 +59,6 @@
     <select id="flagTypeSimple"><option value="none">None</option><option value="bull">Bull Flag</option><option value="bear">Bear Flag</option></select>
 </div>
 
-<!-- ADVANCED MODE -->
 <div class="advanced-toggle" onclick="toggleAdvanced()">
     <span><strong>Advanced Mode (Optional)</strong></span>
     <span id="advArrow">▼</span>
@@ -99,8 +97,7 @@
 <div id="output"></div>
 <canvas id="chart" width="950" height="320"></canvas>
 
-<!-- LINK TO OPTIONS PAGE -->
-<button onclick="window.location.href='options-selector.html'">Go to Options Contract Selector →</button>
+<button onclick="window.location.href='options.html'">Go to Options Contract Selector →</button>
 
 <script>
 function toggleAdvanced() {
@@ -110,14 +107,156 @@ function toggleAdvanced() {
     arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
 }
 
-/* 
+/*  
 ===========================================================
-ALL YOUR GOLDEN FORMULA LOGIC GOES HERE
-===========================================================
-(You already have this — paste your full logic engine here)
+FULL GOLDEN FORMULA LOGIC ENGINE  
 ===========================================================
 */
 
+/* ——— HELPER FUNCTIONS ——— */
+function nearEven(price) {
+    const levels = [5,10,25,50,100];
+    for (let base of levels) {
+        let lvl = Math.round(price / base) * base;
+        if (Math.abs(price - lvl) <= 0.25) return true;
+    }
+    return false;
+}
+
+function parseManualCandles(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const candles = [];
+    for (let line of lines) {
+        const p = line.split(',').map(x => parseFloat(x.trim()));
+        if (p.length === 4 && p.every(v => !isNaN(v))) {
+            candles.push({open:p[0], high:p[1], low:p[2], close:p[3]});
+        }
+    }
+    return candles;
+}
+
+/* ——— AUTO CANDLE GENERATOR ——— */
+function autoGenerateLeftCandles(price, ma20, ma50, ma200, rounding, doubleBottom) {
+    const candles = [];
+    for (let i = 10; i > 0; i--) {
+        let t = i / 10;
+        let trendBias = price > ma20 && ma20 > ma50 && ma50 > ma200 ? 0.4 : -0.1;
+        let patternCurve = rounding ? -Math.cos(t * Math.PI) * 0.6 : 0;
+        if (doubleBottom) patternCurve += (t < 0.5 ? -0.4 : 0.4);
+
+        let close = price - trendBias * i + patternCurve;
+        candles.unshift({
+            open: close - 0.2,
+            high: close + 0.4,
+            low: close - 0.4,
+            close
+        });
+    }
+    return candles;
+}
+
+/* ——— FUTURE SIMULATOR ——— */
+function simulateFuture(score, price, timeframe, rounding, doubleBottom) {
+    let candles = [];
+    let slope = score >= 8 ? 0.8 : score >= 4 ? 0.3 : -0.2;
+    let tfScale = timeframe === "daily" ? 0.3 : timeframe === "4h" ? 0.5 : 1;
+
+    for (let i = 0; i < 20; i++) {
+        let close = price +
+            slope * (i / 5) * tfScale +
+            (rounding ? Math.sin(i / 3) * 0.4 : 0) +
+            (doubleBottom && i > 5 ? (i - 5) * 0.1 : 0);
+
+        candles.push({
+            open: close - 0.2,
+            high: close + 0.5,
+            low: close - 0.5,
+            close
+        });
+    }
+    return candles;
+}
+
+/* ——— ENTRY & STOP ——— */
+function computeEntryStop(price, ma20, ma50, swingLow) {
+    let entry = (ma20 + ma50) / 2;
+    let stop = swingLow ? swingLow * 0.99 : price * 0.97;
+    return { entry: parseFloat(entry.toFixed(2)), stop: parseFloat(stop.toFixed(2)) };
+}
+
+/* ——— CHART DRAWER ——— */
+function drawChart(left, future) {
+    const canvas = document.getElementById("chart");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const all = left.concat(future);
+    let min = Math.min(...all.map(c => c.low));
+    let max = Math.max(...all.map(c => c.high));
+
+    const pad = 20;
+    const w = canvas.width;
+    const h = canvas.height;
+    const cw = (w - pad*2) / all.length;
+
+    function y(v) { return h - pad - ((v - min) / (max - min)) * (h - pad*2); }
+
+    all.forEach((c,i)=>{
+        const x = pad + i*cw + cw/2;
+        ctx.strokeStyle = c.close >= c.open ? "#3cff9d" : "#ff4c84";
+        ctx.fillStyle = ctx.strokeStyle;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y(c.high));
+        ctx.lineTo(x, y(c.low));
+        ctx.stroke();
+
+        const top = y(Math.max(c.open,c.close));
+        const bot = y(Math.min(c.open,c.close));
+        ctx.fillRect(x - cw*0.3, top, cw*0.6, bot-top);
+    });
+}
+
+/* ——— MAIN ——— */
+function runApp() {
+    const price = parseFloat(price.value);
+    const ma20v = parseFloat(ma20.value);
+    const ma50v = parseFloat(ma50.value);
+    const ma200v = parseFloat(ma200.value);
+    const timeframeVal = timeframe.value;
+
+    const rounding = roundingSimple.value === "yes";
+    const doubleBottom = doubleSimple.value === "yes";
+
+    let score = 0;
+    if (price > ma20v && ma20v > ma50v && ma50v > ma200v) score += 3;
+    if (rounding) score += 2;
+    if (doubleBottom) score += 2;
+    if (nearEven(price)) score += 2;
+
+    const leftCandles = parseManualCandles(manualCandles.value).length ?
+        parseManualCandles(manualCandles.value) :
+        autoGenerateLeftCandles(price, ma20v, ma50v, ma200v, rounding, doubleBottom);
+
+    const futureCandles = simulateFuture(score, price, timeframeVal, rounding, doubleBottom);
+
+    drawChart(leftCandles, futureCandles);
+
+    const es = computeEntryStop(price, ma20v, ma50v, parseFloat(swingLow.value));
+
+    let verdict = score >= 8 ? "🔥 Strong Setup" :
+                  score >= 4 ? "⚠️ Decent Setup" :
+                  "❌ Weak Setup";
+
+    document.getElementById("output").innerHTML = `
+        <div class="result ${score>=8?'strong':score>=4?'decent':'weak'}">
+            <h3>${verdict}</h3>
+            <p><strong>Score:</strong> ${score}</p>
+            <p><strong>Suggested Entry:</strong> ${es.entry}</p>
+            <p><strong>Suggested Stop:</strong> ${es.stop}</p>
+        </div>
+    `;
+}
 </script>
 
 </body>
