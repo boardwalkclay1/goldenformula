@@ -2,14 +2,18 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Golden Formula Setup Checker</title>
+    <title>Golden Formula Pro – Setup & Simulator</title>
     <style>
-        body { font-family: Arial, sans-serif; background:#0b0b0f; color:#f5f5f5; padding:20px; max-width:600px; margin:0 auto; }
-        h2 { color:#ff2b6a; }
-        label { display:block; margin-top:10px; font-size:14px; }
-        input, select { padding:8px; margin-top:4px; width:100%; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
+        body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
+        h2 { color:#ff2b6a; margin-bottom:5px; }
+        h3 { margin-top:25px; color:#ff9ac0; }
+        label { display:block; margin-top:10px; font-size:13px; }
+        input, select, textarea { padding:8px; margin-top:4px; width:100%; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; font-size:13px; }
+        textarea { min-height:80px; font-family:monospace; }
         button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
         button:hover { background:#ff4c84; }
+        .row { display:flex; gap:20px; flex-wrap:wrap; }
+        .col { flex:1 1 260px; }
         .result { margin-top:20px; padding:15px; border-radius:8px; }
         .strong { background:#123822; border:1px solid #1f8b4c; }
         .decent { background:#3a3218; border:1px solid #8b6b1f; }
@@ -17,55 +21,101 @@
         ul { padding-left:20px; }
         pre { white-space:pre-wrap; word-wrap:break-word; }
         small { color:#aaa; font-size:11px; }
+        canvas { background:#0f0f16; border:1px solid #333; border-radius:6px; margin-top:15px; width:100%; max-width:850px; }
     </style>
 </head>
 <body>
 
-<h2>Golden Formula Setup Checker</h2>
-<small>This is a logic-based decision tool. It does not place trades or connect to any broker.</small>
+<h2>Golden Formula Pro – Setup Checker & Logic Simulator</h2>
+<small>This is a logic-based decision and visualization tool. It does not place trades or connect to any broker.</small>
 
-<label>Timeframe</label>
-<select id="timeframe">
-    <option value="5m">5m</option>
-    <option value="15m">15m</option>
-    <option value="1h">1h</option>
-    <option value="4h">4h</option>
-    <option value="daily">Daily</option>
-</select>
+<div class="row">
+    <div class="col">
+        <h3>Core Setup Inputs</h3>
 
-<label>Current Price</label>
-<input id="price" type="number" step="0.01">
+        <label>Timeframe</label>
+        <select id="timeframe">
+            <option value="5m">5m</option>
+            <option value="15m">15m</option>
+            <option value="1h">1h</option>
+            <option value="4h">4h</option>
+            <option value="daily">Daily</option>
+        </select>
 
-<label>20 EMA</label>
-<input id="ma20" type="number" step="0.01">
+        <label>Current Price</label>
+        <input id="price" type="number" step="0.01">
 
-<label>50 EMA</label>
-<input id="ma50" type="number" step="0.01">
+        <label>20 EMA</label>
+        <input id="ma20" type="number" step="0.01">
 
-<label>200 EMA</label>
-<input id="ma200" type="number" step="0.01">
+        <label>50 EMA</label>
+        <input id="ma50" type="number" step="0.01">
 
-<label>Is price reacting to a clean even level (10, 20, 25, 50, 100, etc.)?</label>
-<select id="even">
-    <option value="no">No</option>
-    <option value="yes">Yes</option>
-</select>
+        <label>200 EMA</label>
+        <input id="ma200" type="number" step="0.01">
 
-<label>Do you see a rounding bottom forming/formed?</label>
-<select id="rounding">
-    <option value="no">No</option>
-    <option value="yes">Yes</option>
-</select>
+        <label>Is price reacting to a clean even level (10, 20, 25, 50, 100, etc.)?</label>
+        <select id="even">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+        </select>
 
-<label>Do you see a clear double bottom pattern?</label>
-<select id="double">
-    <option value="no">No</option>
-    <option value="yes">Yes</option>
-</select>
+        <label>Do you see a rounding bottom forming/formed?</label>
+        <select id="rounding">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+        </select>
 
-<button onclick="checkSetup()">Check Setup</button>
+        <label>Do you see a clear double bottom pattern?</label>
+        <select id="double">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+        </select>
+    </div>
+
+    <div class="col">
+        <h3>Flag Pattern Inputs</h3>
+
+        <label>Flag Type</label>
+        <select id="flagType">
+            <option value="none">None</option>
+            <option value="bull">Bull Flag</option>
+            <option value="bear">Bear Flag</option>
+        </select>
+
+        <label>Pole Low (start of impulse)</label>
+        <input id="poleLow" type="number" step="0.01">
+
+        <label>Pole High (end of impulse)</label>
+        <input id="poleHigh" type="number" step="0.01">
+
+        <label>Flag Low (bottom of consolidation)</label>
+        <input id="flagLow" type="number" step="0.01">
+
+        <label>Flag High (top of consolidation)</label>
+        <input id="flagHigh" type="number" step="0.01">
+
+        <label>Breakout Direction</label>
+        <select id="breakoutDir">
+            <option value="none">None / Not yet</option>
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+        </select>
+    </div>
+</div>
+
+<h3>Optional: Manual Candles (Left Side)</h3>
+<small>Format: one candle per line as <code>open,high,low,close</code>. If left empty, candles are auto-generated from your logic.</small>
+<textarea id="manualCandles" placeholder="Example:
+100,102,99,101
+101,103,100,102
+..."></textarea>
+
+<button onclick="runApp()">Run Golden Formula</button>
 
 <div id="output"></div>
+
+<canvas id="chart" width="850" height="320"></canvas>
 
 <script>
 function nearEven(price) {
@@ -79,7 +129,60 @@ function nearEven(price) {
     return false;
 }
 
-function simulateFuture(score, price, ma20, ma50, ma200, rounding, doubleBottom, timeframe) {
+function parseManualCandles(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const candles = [];
+    for (let line of lines) {
+        const parts = line.split(',').map(x => x.trim());
+        if (parts.length !== 4) continue;
+        const o = parseFloat(parts[0]);
+        const h = parseFloat(parts[1]);
+        const l = parseFloat(parts[2]);
+        const c = parseFloat(parts[3]);
+        if ([o,h,l,c].some(v => isNaN(v))) continue;
+        candles.push({open:o, high:h, low:l, close:c});
+    }
+    return candles;
+}
+
+function autoGenerateLeftCandles(price, ma20, ma50, ma200, rounding, doubleBottom, flagType, poleLow, poleHigh, flagLow, flagHigh) {
+    const candles = [];
+    let base = price;
+
+    // Generate 10 candles leading into current price
+    for (let i = 10; i > 0; i--) {
+        let t = i / 10;
+        let trendBias = 0;
+
+        // Use MA structure to shape left side
+        if (price > ma20 && ma20 > ma50 && ma50 > ma200) trendBias = 0.4;
+        else if (price > ma20 && ma20 > ma50) trendBias = 0.2;
+        else if (ma20 > ma50 && ma50 > ma200) trendBias = 0.1;
+        else trendBias = -0.1;
+
+        let patternCurve = 0;
+        if (rounding) patternCurve = -Math.cos(t * Math.PI) * 0.6; // rounding bottom arc
+        if (doubleBottom) patternCurve += (t < 0.5 ? -0.4 : 0.4);
+
+        let flagEffect = 0;
+        if (flagType !== "none" && poleHigh && poleLow && flagHigh && flagLow) {
+            const poleMid = (poleHigh + poleLow) / 2;
+            const flagMid = (flagHigh + flagLow) / 2;
+            flagEffect = (flagMid - poleMid) * t * 0.2;
+        }
+
+        let close = base - (trendBias * i) + patternCurve + flagEffect;
+        let high = close + 0.4;
+        let low = close - 0.4;
+        let open = close - 0.2;
+
+        candles.unshift({open, high, low, close});
+    }
+
+    return candles;
+}
+
+function simulateFuture(score, price, ma20, ma50, ma200, rounding, doubleBottom, timeframe, flagType, breakoutDir) {
     let candles = [];
     let base = price;
 
@@ -98,29 +201,179 @@ function simulateFuture(score, price, ma20, ma50, ma200, rounding, doubleBottom,
     let roundingBoost = rounding ? 0.4 : 0;
     let doubleBoost = doubleBottom ? 0.6 : 0;
 
+    // Flag continuation effect
+    let flagBoost = 0;
+    if (flagType === "bull" && breakoutDir === "up") flagBoost = 0.7;
+    if (flagType === "bear" && breakoutDir === "down") flagBoost = -0.7;
+
     // Even level bounce
     let evenBounce = nearEven(price) ? 0.5 : 0;
 
-    // Deterministic future path (no randomness)
     for (let i = 0; i < 20; i++) {
         let trendComponent = slope * (i / 5) * tfScale;
         let patternComponent = roundingBoost * Math.sin(i / 3);
         let breakoutComponent = doubleBoost * (i > 5 ? (i - 5) / 5 : 0);
         let bounceComponent = evenBounce * Math.cos(i / 4);
+        let flagComponent = flagBoost * (i > 3 ? (i - 3) / 6 : 0);
 
-        let next = base +
+        let close = base +
             trendComponent +
             patternComponent +
             breakoutComponent +
-            bounceComponent;
+            bounceComponent +
+            flagComponent;
 
-        candles.push(next.toFixed(2));
+        let high = close + 0.5;
+        let low = close - 0.5;
+        let open = close - 0.2;
+
+        candles.push({open, high, low, close});
     }
 
     return candles;
 }
 
-function checkSetup() {
+function evaluateFlag(flagType, poleLow, poleHigh, flagLow, flagHigh, breakoutDir) {
+    let score = 0;
+    let reasons = [];
+
+    if (flagType === "none") {
+        reasons.push("No flag pattern selected.");
+        return {score, reasons};
+    }
+
+    if (isNaN(poleLow) || isNaN(poleHigh) || isNaN(flagLow) || isNaN(flagHigh)) {
+        reasons.push("Flag inputs incomplete; cannot fully evaluate flag pattern.");
+        return {score, reasons};
+    }
+
+    const poleSize = Math.abs(poleHigh - poleLow);
+    const flagDepth = Math.abs(flagHigh - flagLow);
+
+    if (poleSize <= 0) {
+        reasons.push("Flag pole size invalid.");
+        return {score, reasons};
+    }
+
+    const depthRatio = flagDepth / poleSize;
+
+    if (flagType === "bull") {
+        if (poleHigh > poleLow) {
+            score += 1;
+            reasons.push("Bull flag: pole is upward.");
+        } else {
+            reasons.push("Bull flag: pole is not clearly upward.");
+        }
+        if (depthRatio < 0.5) {
+            score += 1;
+            reasons.push("Bull flag: pullback is shallow relative to pole.");
+        } else {
+            reasons.push("Bull flag: pullback may be too deep.");
+        }
+        if (breakoutDir === "up") {
+            score += 1;
+            reasons.push("Bull flag: breakout direction is up.");
+        } else if (breakoutDir === "none") {
+            reasons.push("Bull flag: breakout not yet confirmed.");
+        } else {
+            reasons.push("Bull flag: breakout direction contradicts pattern.");
+        }
+    }
+
+    if (flagType === "bear") {
+        if (poleLow < poleHigh) {
+            score += 1;
+            reasons.push("Bear flag: pole is downward.");
+        } else {
+            reasons.push("Bear flag: pole is not clearly downward.");
+        }
+        if (depthRatio < 0.5) {
+            score += 1;
+            reasons.push("Bear flag: pullback is shallow relative to pole.");
+        } else {
+            reasons.push("Bear flag: pullback may be too deep.");
+        }
+        if (breakoutDir === "down") {
+            score += 1;
+            reasons.push("Bear flag: breakout direction is down.");
+        } else if (breakoutDir === "none") {
+            reasons.push("Bear flag: breakout not yet confirmed.");
+        } else {
+            reasons.push("Bear flag: breakout direction contradicts pattern.");
+        }
+    }
+
+    return {score, reasons};
+}
+
+function drawChart(canvasId, leftCandles, futureCandles) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const allCandles = leftCandles.concat(futureCandles);
+    if (allCandles.length === 0) return;
+
+    let minPrice = Infinity;
+    let maxPrice = -Infinity;
+    allCandles.forEach(c => {
+        minPrice = Math.min(minPrice, c.low);
+        maxPrice = Math.max(maxPrice, c.high);
+    });
+
+    const padding = 20;
+    const w = canvas.width;
+    const h = canvas.height;
+    const total = allCandles.length;
+    const candleWidth = Math.max(4, (w - padding*2) / (total + 2));
+
+    function yFor(price) {
+        const range = maxPrice - minPrice || 1;
+        return h - padding - ((price - minPrice) / range) * (h - padding*2);
+    }
+
+    ctx.fillStyle = "#0f0f16";
+    ctx.fillRect(0,0,w,h);
+
+    // Midline between left and future
+    const splitIndex = leftCandles.length;
+    const splitX = padding + splitIndex * candleWidth;
+    ctx.strokeStyle = "#333";
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(splitX, padding);
+    ctx.lineTo(splitX, h - padding);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw candles
+    allCandles.forEach((c, i) => {
+        const x = padding + i * candleWidth + candleWidth/2;
+        const yHigh = yFor(c.high);
+        const yLow = yFor(c.low);
+        const yOpen = yFor(c.open);
+        const yClose = yFor(c.close);
+
+        const bullish = c.close >= c.open;
+        ctx.strokeStyle = bullish ? "#3cff9d" : "#ff4c84";
+        ctx.fillStyle = bullish ? "#3cff9d" : "#ff4c84";
+
+        // Wick
+        ctx.beginPath();
+        ctx.moveTo(x, yHigh);
+        ctx.lineTo(x, yLow);
+        ctx.stroke();
+
+        // Body
+        const bodyTop = Math.min(yOpen, yClose);
+        const bodyBottom = Math.max(yOpen, yClose);
+        const bodyHeight = Math.max(2, bodyBottom - bodyTop);
+        ctx.fillRect(x - candleWidth*0.35, bodyTop, candleWidth*0.7, bodyHeight);
+    });
+}
+
+function runApp() {
     let timeframe = document.getElementById("timeframe").value;
     let price = parseFloat(document.getElementById("price").value);
     let ma20 = parseFloat(document.getElementById("ma20").value);
@@ -129,7 +382,7 @@ function checkSetup() {
 
     if (isNaN(price) || isNaN(ma20) || isNaN(ma50) || isNaN(ma200)) {
         document.getElementById("output").innerHTML =
-            "<p>Please fill in all numeric fields.</p>";
+            "<p>Please fill in all core numeric fields (price and EMAs).</p>";
         return;
     }
 
@@ -137,10 +390,17 @@ function checkSetup() {
     let rounding = document.getElementById("rounding").value === "yes";
     let doubleBottom = document.getElementById("double").value === "yes";
 
+    let flagType = document.getElementById("flagType").value;
+    let poleLow = parseFloat(document.getElementById("poleLow").value);
+    let poleHigh = parseFloat(document.getElementById("poleHigh").value);
+    let flagLow = parseFloat(document.getElementById("flagLow").value);
+    let flagHigh = parseFloat(document.getElementById("flagHigh").value);
+    let breakoutDir = document.getElementById("breakoutDir").value;
+
     let score = 0;
     let reasons = [];
 
-    // Trend logic (your MA structure)
+    // Trend logic
     if (price > ma20 && ma20 > ma50 && ma50 > ma200) {
         score += 3;
         reasons.push("Strong uptrend: price > 20 > 50 > 200.");
@@ -154,13 +414,13 @@ function checkSetup() {
         reasons.push("Trend not clearly bullish based on EMAs.");
     }
 
-    // Pullback zone (20–50 area)
+    // Pullback zone
     if (price >= ma20 && price <= ma50 * 1.02) {
         score += 1;
         reasons.push("Price near 20–50 zone (healthy pullback area).");
     }
 
-    // Even level logic (psychological level)
+    // Even level
     if (even || nearEven(price)) {
         score += 2;
         reasons.push("Price near key even/psychological level.");
@@ -182,11 +442,21 @@ function checkSetup() {
         reasons.push("Higher timeframe context (more reliable).");
     }
 
-    // Final verdict
+    // Flag evaluation
+    const flagEval = evaluateFlag(flagType, poleLow, poleHigh, flagLow, flagHigh, breakoutDir);
+    if (flagEval.score > 0) {
+        score += flagEval.score;
+    }
+    reasons = reasons.concat(flagEval.reasons);
+
+    // Verdict
     let verdict = "";
     let cssClass = "";
 
-    if (score >= 7) {
+    if (score >= 9) {
+        verdict = "🔥 Elite Golden Setup (stacked confluence).";
+        cssClass = "strong";
+    } else if (score >= 7) {
         verdict = "🔥 Strong Buy Setup (according to your formula).";
         cssClass = "strong";
     } else if (score >= 4) {
@@ -197,8 +467,19 @@ function checkSetup() {
         cssClass = "weak";
     }
 
-    // Logic-based future simulation
-    let future = simulateFuture(
+    // Left candles: manual or auto
+    const manualText = document.getElementById("manualCandles").value;
+    let leftCandles = parseManualCandles(manualText);
+    if (leftCandles.length === 0) {
+        leftCandles = autoGenerateLeftCandles(
+            price, ma20, ma50, ma200,
+            rounding, doubleBottom,
+            flagType, poleLow, poleHigh, flagLow, flagHigh
+        );
+    }
+
+    // Future candles
+    const futureCandles = simulateFuture(
         score,
         price,
         ma20,
@@ -206,19 +487,20 @@ function checkSetup() {
         ma200,
         rounding,
         doubleBottom,
-        timeframe
+        timeframe,
+        flagType,
+        breakoutDir
     );
 
-    // Build output HTML
+    // Draw chart
+    drawChart("chart", leftCandles, futureCandles);
+
+    // Build output
     let html = `<div class="result ${cssClass}">
         <h3>${verdict}</h3>
-        <p><strong>Score:</strong> ${score}</p>
+        <p><strong>Total Score:</strong> ${score}</p>
         <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
-        <h4>Simulated Future Path (Logic-Based)</h4>
-        <pre style="background:#15151b; padding:10px; border-radius:6px;">
-${future.join("  ")}
-        </pre>
-        <small>Same inputs will always produce the same simulated path. This is a logic scenario, not a price prediction.</small>
+        <small>Same inputs will always produce the same simulated path and chart. This is a logic scenario, not a price prediction or trading advice.</small>
     </div>`;
 
     document.getElementById("output").innerHTML = html;
