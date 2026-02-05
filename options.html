@@ -1,222 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Options – Contract Picker</title>
-<script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
-  h1 { color:#ff2b6a; }
-  h2 { color:#ff9ac0; margin-top:20px; }
-  label { display:block; margin-top:8px; font-size:13px; }
-  textarea, select, input { width:100%; padding:7px; margin-top:3px; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
-  textarea { min-height:80px; font-family:monospace; }
-  button { width:100%; padding:10px; margin-top:15px; border:none; border-radius:4px; background:#ff2b6a; color:#fff; font-weight:bold; cursor:pointer; }
-  button:hover { background:#ff4c84; }
-  .box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
-  .result { margin-top:15px; padding:12px; border-radius:6px; background:#123822; border:1px solid #1f8b4c; }
-  .note { font-size:11px; color:#b0b0c0; margin-top:3px; }
-  ul { margin-top:6px; }
-</style>
+  <meta charset="UTF-8">
+  <title>Golden Formula – Options Picker</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 </head>
 <body>
+  <header class="gf-header">
+    <h1>Golden Formula – Options Picker</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="golden-rules.html">Golden Rules</a>
+      <a href="glossary.html">Glossary</a>
+      <a href="brokers.html">Brokers & Accounts</a>
+      <a href="simulator.html">Simulator</a>
+    </nav>
+  </header>
 
-<h1>Options – Contract Picker</h1>
-<p class="note">
-  This page reads the Golden Formula setup and your options chain (from screenshot or paste) and picks a contract that is in the money or very close to it.
-</p>
+  <main>
+    <section class="gf-hero">
+      <h2>Pick the Cleanest Contract</h2>
+      <p>
+        This page reads your Golden Formula setup and your options chain (from screenshot or paste)
+        and picks the contract that is in the money or very close to it.
+      </p>
+    </section>
 
-<div class="box" id="setupBox"></div>
+    <section class="gf-tool">
+      <h2>Setup From Golden Formula</h2>
+      <div id="setupBox" class="gf-trade-alive"></div>
 
-<div class="box">
-  <h2>1. Options chain input</h2>
+      <h2>1. Options chain input</h2>
 
-  <label>Upload options chain screenshot (auto‑read)</label>
-  <input type="file" id="chainImage" accept="image/*">
-  <p class="note" id="chainStatus">No image loaded yet.</p>
+      <label>Upload options chain screenshot</label>
+      <input type="file" id="chainImage" accept="image/*">
+      <p class="note" id="chainStatus">No image loaded yet.</p>
 
-  <label>Or paste chain text</label>
-  <textarea id="chainBox" placeholder="Example:
-strike, callBid, callAsk, putBid, putAsk
-12, 1.63, 2.31, 0.05, 0.07
-12.5, 1.33, 1.77, 0.09, 0.15
-13, 0.90, 1.04, 0.19, 0.23"></textarea>
+      <label>Or paste chain text</label>
+      <textarea id="chainBox" placeholder="Paste your options chain here..."></textarea>
 
-  <label>Days until expiration</label>
-  <select id="days">
-    <option value="1">1–2 days</option>
-    <option value="3">3–5 days</option>
-    <option value="7">About 1 week</option>
-    <option value="14">About 2 weeks</option>
-    <option value="30">About 1 month</option>
-  </select>
-</div>
+      <label>Days until expiration</label>
+      <select id="days">
+        <option value="1">1–2 days</option>
+        <option value="3">3–5 days</option>
+        <option value="7">About 1 week</option>
+        <option value="14">About 2 weeks</option>
+        <option value="30">About 1 month</option>
+      </select>
 
-<button onclick="pickContract()">Pick Contract</button>
+      <button id="pickBtn">Pick Contract</button>
+      <div id="optionsOutput" class="result"></div>
+    </section>
 
-<div id="optionsOutput" class="result"></div>
+    <section class="gf-links">
+      <button onclick="window.location.href='index.html'">← Back to Home</button>
+      <button onclick="window.location.href='simulator.html'">Go to Simulator →</button>
+    </section>
+  </main>
 
-<button onclick="window.location.href='index.html'">← Back to Home</button>
-<button onclick="window.location.href='simulator.html'">Go to Simulator →</button>
+  <script type="module">
+    import { parseChainLoose, pickBestContract } from './modules/core.js';
+    import { attachAutoOCR } from './modules/ocr.js';
 
-<script>
-function loadSetup() {
-  const direction = localStorage.getItem("gf_direction") || "none";
-  const entry = localStorage.getItem("gf_entry") || "";
-  const stop = localStorage.getItem("gf_stop") || "";
-  const price = localStorage.getItem("gf_price") || "";
-  const tf = localStorage.getItem("gf_timeframe") || "unknown";
+    function loadSetup() {
+      const direction = localStorage.getItem("gf_direction") || "none";
+      const entry     = localStorage.getItem("gf_entry") || "";
+      const stop      = localStorage.getItem("gf_stop") || "";
+      const price     = localStorage.getItem("gf_price") || "";
+      const tf        = localStorage.getItem("gf_timeframe") || "unknown";
 
-  document.getElementById("setupBox").innerHTML = `
-    <h2>Setup From Golden Formula</h2>
-    <p><strong>Type:</strong> ${
-      direction === "call" ? "CALL (bet on up)" :
-      direction === "put" ? "PUT (bet on down)" :
-      "No trade"
-    }</p>
-    <p><strong>Entry (even number):</strong> ${entry || "—"}</p>
-    <p><strong>Chart Stop (20% idea):</strong> ${stop || "—"}</p>
-    <p><strong>Current Price:</strong> ${price || "—"}</p>
-    <p><strong>Timeframe:</strong> ${tf}</p>
-  `;
-}
-
-function parseChainLoose(text) {
-  const rows = [];
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  lines.forEach(line => {
-    const parts = line.split(/[\s,|]+/).filter(x => x.length);
-    const nums = parts.map(x => parseFloat(x)).filter(x => !isNaN(x));
-    if (nums.length >= 5) {
-      const strike = nums[0];
-      const callBid = nums[1];
-      const callAsk = nums[2];
-      const putBid = nums[3];
-      const putAsk = nums[4];
-      rows.push({ strike, callBid, callAsk, putBid, putAsk });
+      document.getElementById("setupBox").innerHTML = `
+        <p><strong>Type:</strong> ${
+          direction === "call" ? "CALL (bet on up)" :
+          direction === "put" ? "PUT (bet on down)" :
+          "No trade"
+        }</p>
+        <p><strong>Entry (even number):</strong> ${entry || "—"}</p>
+        <p><strong>Chart Stop (20% idea):</strong> ${stop || "—"}</p>
+        <p><strong>Current Price:</strong> ${price || "—"}</p>
+        <p><strong>Timeframe:</strong> ${tf}</p>
+      `;
     }
-  });
-  return rows;
-}
 
-function pickContract() {
-  const direction = localStorage.getItem("gf_direction") || "none";
-  const entry = parseFloat(localStorage.getItem("gf_entry") || "0");
-  const price = parseFloat(localStorage.getItem("gf_price") || "0");
-  const days = parseInt(document.getElementById("days").value, 10);
+    function runPicker() {
+      const direction = localStorage.getItem("gf_direction") || "none";
+      const entry     = parseFloat(localStorage.getItem("gf_entry") || "0");
+      const price     = parseFloat(localStorage.getItem("gf_price") || "0");
+      const days      = parseInt(document.getElementById("days").value, 10);
 
-  if (direction === "none" || !entry || !price) {
-    document.getElementById("optionsOutput").innerHTML = `
-      <h2>No Options Idea</h2>
-      <p>The setup is not clear enough to turn into an options trade.</p>
-    `;
-    return;
-  }
+      const chainText = document.getElementById("chainBox").value;
+      const chain = parseChainLoose(chainText);
 
-  const chainText = document.getElementById("chainBox").value;
-  const chain = parseChainLoose(chainText);
-  if (!chain.length) {
-    document.getElementById("optionsOutput").innerHTML = `
-      <h2>No Chain Data</h2>
-      <p>Please paste your options chain or upload a clearer screenshot.</p>
-    `;
-    return;
-  }
+      const result = pickBestContract(direction, entry, price, days, chain);
 
-  let best = null;
-  const notes = [];
-
-  if (direction === "call") {
-    notes.push("Looking for a CALL that is in the money or very close to your even‑number entry.");
-    chain.forEach(row => {
-      if (row.strike <= entry) {
-        const distance = Math.abs(entry - row.strike);
-        if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "CALL" };
-      }
-    });
-    if (!best) {
-      chain.forEach(row => {
-        if (row.strike > entry) {
-          const distance = Math.abs(entry - row.strike);
-          if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "CALL" };
-        }
-      });
+      document.getElementById("optionsOutput").innerHTML = result.html;
     }
-  } else {
-    notes.push("Looking for a PUT that is in the money or very close to your even‑number entry.");
-    chain.forEach(row => {
-      if (row.strike >= entry) {
-        const distance = Math.abs(entry - row.strike);
-        if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "PUT" };
-      }
-    });
-    if (!best) {
-      chain.forEach(row => {
-        if (row.strike < entry) {
-          const distance = Math.abs(entry - row.strike);
-          if (!best || distance < Math.abs(entry - best.strike)) best = { ...row, type: "PUT" };
-        }
-      });
-    }
-  }
 
-  if (!best) {
-    document.getElementById("optionsOutput").innerHTML = `
-      <h2>No Matching Contract</h2>
-      <p>Could not find a strike near the entry level.</p>
-    `;
-    return;
-  }
-
-  let midPrice = 0;
-  if (best.type === "CALL") midPrice = (best.callBid + best.callAsk) / 2;
-  else midPrice = (best.putBid + best.putAsk) / 2;
-  midPrice = isNaN(midPrice) ? 0 : midPrice;
-  const stopLossOption = (midPrice * 0.8).toFixed(2);
-
-  notes.push("Picked the strike closest to your even‑number entry.");
-  notes.push("Used the middle of bid and ask as a rough option price.");
-  notes.push("Simple idea: risk about 20% of the option price (same spirit as the chart stop).");
-
-  let directionText = direction === "call"
-    ? "CALL (you think price will go up from the even number)."
-    : "PUT (you think price will go down from the even number).";
-
-  let expiryText = "";
-  if (days <= 2) expiryText = "very short‑term move (1–2 days).";
-  else if (days <= 5) expiryText = "short‑term move (3–5 days).";
-  else if (days <= 10) expiryText = "about a week or so.";
-  else if (days <= 20) expiryText = "a couple of weeks.";
-  else expiryText = "a swing over about a month.";
-
-  document.getElementById("optionsOutput").innerHTML = `
-    <h2>Suggested Options Contract</h2>
-    <p><strong>Direction:</strong> ${directionText}</p>
-    <p><strong>Strike:</strong> ${best.strike}</p>
-    <p><strong>Type:</strong> ${best.type}</p>
-    <p><strong>Approx. Option Price:</strong> ${midPrice ? midPrice.toFixed(2) : "N/A"}</p>
-    <p><strong>Simple Stop Idea on Option:</strong> about ${stopLossOption} (20% below that rough price).</p>
-    <p><strong>Expiration:</strong> This looks like a ${expiryText}</p>
-    <h3>Why this contract:</h3>
-    <ul>${notes.map(n => `<li>${n}</li>`).join("")}</ul>
-  `;
-}
-
-document.getElementById("chainImage").addEventListener("change", e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  document.getElementById("chainStatus").textContent = "Reading chain image...";
-  Tesseract.recognize(file, 'eng').then(({ data }) => {
-    const text = data.text || "";
-    document.getElementById("chainBox").value = text;
-    document.getElementById("chainStatus").textContent = "Image read. Chain text filled automatically.";
-  }).catch(() => {
-    document.getElementById("chainStatus").textContent = "Could not read image. Try a clearer screenshot.";
-  });
-});
-
-loadSetup();
-</script>
-
+    attachAutoOCR("chainImage", "chainBox", "chainStatus");
+    loadSetup();
+    document.getElementById("pickBtn").addEventListener("click", runPicker);
+  </script>
 </body>
 </html>
