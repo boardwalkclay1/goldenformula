@@ -2,195 +2,89 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Advanced Options Selector – Golden Formula Linked</title>
+<title>Options – Simple Contract Picker</title>
 <style>
   body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
   h1 { color:#ff2b6a; }
-  h2 { color:#ff9ac0; margin-top:25px; }
-  label { display:block; margin-top:8px; font-size:13px; }
-  select { padding:7px; width:100%; background:#15151b; color:#fff; border:1px solid #333; border-radius:4px; }
-  button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
+  h2 { color:#ff9ac0; margin-top:20px; }
+  button { width:100%; padding:10px; margin-top:15px; border:none; border-radius:4px; background:#ff2b6a; color:#fff; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
-  .section-box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
-  .result { margin-top:20px; padding:15px; border-radius:8px; background:#123822; border:1px solid #1f8b4c; }
+  .box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
+  .result { margin-top:15px; padding:12px; border-radius:6px; background:#123822; border:1px solid #1f8b4c; }
   .note { font-size:11px; color:#b0b0c0; margin-top:3px; }
-  ul { margin-top:10px; }
+  ul { margin-top:6px; }
 </style>
 </head>
 <body>
 
-<h1>Advanced Options Selector</h1>
+<h1>Options – Simple Contract Picker</h1>
 <p class="note">
-  This engine reads the Golden Formula output and selects the most statistically aligned options contract based on trend strength, score, R:R, timeframe, and risk profile.
+  This page takes the setup from the Golden Formula page and turns it into a simple options idea.
 </p>
 
-<div id="formulaData" class="section-box"></div>
+<div id="formulaData" class="box"></div>
 
-<div class="section-box">
-  <h2>Risk Profile & Strategy</h2>
-
-  <label>Risk Level
-    <span class="note">Determines moneyness, delta, and leverage.</span>
-  </label>
-  <select id="riskLevel">
-    <option value="low">Low – Deep ITM, high delta</option>
-    <option value="medium">Medium – ATM, balanced</option>
-    <option value="high">High – OTM, high leverage</option>
-  </select>
-
-  <label>Advanced Options Mode
-    <span class="note">Enables delta‑based strike tuning and expiration compression.</span>
-  </label>
-  <select id="advancedMode">
-    <option value="on">ON – Full advanced logic</option>
-    <option value="off">OFF – Simple Calls/Puts only</option>
-  </select>
-</div>
-
-<button onclick="runOptions()">Generate Options Recommendation</button>
+<button onclick="makeSuggestion()">Get Options Suggestion</button>
 
 <div id="optionsOutput"></div>
 
-<button onclick="window.location.href='index.html'">← Back to Golden Formula</button>
+<button onclick="window.location.href='index.html'">← Back to Setup Page</button>
 
 <script>
-// Load Golden Formula data
 function loadFormulaData() {
-  const direction = localStorage.getItem("gf_direction") || "neutral";
-  const score = parseFloat(localStorage.getItem("gf_score") || "0");
-  const entry = parseFloat(localStorage.getItem("gf_entry") || "0");
-  const stop = parseFloat(localStorage.getItem("gf_stop") || "0");
-  const target = parseFloat(localStorage.getItem("gf_target") || "0");
-  const rr = parseFloat(localStorage.getItem("gf_rr") || "0");
+  const direction = localStorage.getItem("gf_direction") || "none";
+  const entry = localStorage.getItem("gf_entry") || "";
+  const stop = localStorage.getItem("gf_stop") || "";
   const timeframe = localStorage.getItem("gf_timeframe") || "unknown";
 
   document.getElementById("formulaData").innerHTML = `
-    <h2>Golden Formula Output</h2>
-    <p><strong>Direction:</strong> ${direction}</p>
-    <p><strong>Score:</strong> ${score}</p>
-    <p><strong>Entry:</strong> ${entry}</p>
-    <p><strong>Stop:</strong> ${stop}</p>
-    <p><strong>Target:</strong> ${target}</p>
-    <p><strong>R:R:</strong> ${rr}:1</p>
+    <h2>Setup From Previous Page</h2>
+    <p><strong>Type:</strong> ${direction === "call" ? "CALL (bet on up)" : direction === "put" ? "PUT (bet on down)" : "No trade"}</p>
+    <p><strong>Entry:</strong> ${entry || "—"}</p>
+    <p><strong>Stop (20%):</strong> ${stop || "—"}</p>
     <p><strong>Timeframe:</strong> ${timeframe}</p>
+    <p class="note">If this shows “No trade”, the first page did not find a clean setup.</p>
   `;
 }
 
-// Advanced contract selection logic
-function chooseAdvancedContract(direction, score, entry, stop, target, timeframe, riskLevel) {
-  let notes = [];
-  let contractType = "";
-  let strike = "";
+function makeSuggestion() {
+  const direction = localStorage.getItem("gf_direction") || "none";
+  const entry = parseFloat(localStorage.getItem("gf_entry") || "0");
+  const timeframe = localStorage.getItem("gf_timeframe") || "unknown";
+
+  if (direction === "none" || !entry) {
+    document.getElementById("optionsOutput").innerHTML = `
+      <div class="result">
+        <h2>No Options Idea</h2>
+        <p>The first page did not find a clear, simple setup. There is nothing to turn into an options trade.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Simple expiration suggestion based on timeframe
   let expiration = "";
+  if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days from now";
+  else if (timeframe === "1h") expiration = "3–5 days from now";
+  else if (timeframe === "4h") expiration = "1–2 weeks from now";
+  else expiration = "2–4 weeks from now";
 
-  // 1. Expiration logic (score + timeframe)
-  if (timeframe === "5m" || timeframe === "15m") {
-    expiration = score >= 8 ? "0DTE–2DTE" : "1–3 days";
-    notes.push("Short timeframe → short expiration.");
-  } else if (timeframe === "1h") {
-    expiration = score >= 8 ? "3–5 days" : "5–10 days";
-    notes.push("1h chart → weekly expirations preferred.");
-  } else if (timeframe === "4h") {
-    expiration = score >= 8 ? "1–2 weeks" : "2–4 weeks";
-    notes.push("4h chart → multi‑week expirations.");
-  } else if (timeframe === "daily") {
-    expiration = score >= 8 ? "2–4 weeks" : "4–8 weeks";
-    notes.push("Daily chart → swing‑length expirations.");
-  }
-
-  // 2. Delta targets based on risk
-  let deltaTarget = 0.50; // ATM baseline
-  if (riskLevel === "low") deltaTarget = 0.75; // Deep ITM
-  if (riskLevel === "medium") deltaTarget = 0.50; // ATM
-  if (riskLevel === "high") deltaTarget = 0.25; // OTM
-
-  notes.push(`Risk level → target delta ≈ ${deltaTarget}.`);
-
-  // 3. Strike selection based on direction + delta target
-  if (direction === "bullish") {
-    if (deltaTarget >= 0.70) {
-      contractType = "Deep ITM Call";
-      strike = (entry * 0.94).toFixed(2);
-      notes.push("Deep ITM Call chosen for high delta and stability.");
-    } else if (deltaTarget >= 0.45) {
-      contractType = "ATM Call";
-      strike = entry.toFixed(2);
-      notes.push("ATM Call chosen for balanced exposure.");
-    } else {
-      contractType = "OTM Call";
-      strike = (entry * 1.03).toFixed(2);
-      notes.push("OTM Call chosen for leverage and lower cost.");
-    }
-  }
-
-  if (direction === "bearish") {
-    if (deltaTarget >= 0.70) {
-      contractType = "Deep ITM Put";
-      strike = (entry * 1.06).toFixed(2);
-      notes.push("Deep ITM Put chosen for high delta and stability.");
-    } else if (deltaTarget >= 0.45) {
-      contractType = "ATM Put";
-      strike = entry.toFixed(2);
-      notes.push("ATM Put chosen for balanced exposure.");
-    } else {
-      contractType = "OTM Put";
-      strike = (entry * 0.97).toFixed(2);
-      notes.push("OTM Put chosen for leverage and lower cost.");
-    }
-  }
-
-  // 4. R:R adjustment
-  const rr = Math.abs(target - entry) / Math.abs(entry - stop);
-  if (rr >= 2.5 && riskLevel !== "low") {
-    notes.push("High R:R detected → allowing slightly more OTM risk.");
-  }
-
-  return { contractType, strike, expiration, notes };
-}
-
-// Simple mode
-function chooseSimpleContract(direction, entry, timeframe) {
-  let expiration = "";
-  if (timeframe === "5m" || timeframe === "15m") expiration = "0–2 days";
-  else if (timeframe === "1h") expiration = "3–7 days";
-  else if (timeframe === "4h") expiration = "1–2 weeks";
-  else expiration = "2–6 weeks";
-
-  return {
-    contractType: direction === "bullish" ? "Call" : "Put",
-    strike: entry.toFixed(2),
-    expiration,
-    notes: ["Simple mode → ATM directional contract."]
-  };
-}
-
-function runOptions() {
-  const direction = localStorage.getItem("gf_direction");
-  const score = parseFloat(localStorage.getItem("gf_score"));
-  const entry = parseFloat(localStorage.getItem("gf_entry"));
-  const stop = parseFloat(localStorage.getItem("gf_stop"));
-  const target = parseFloat(localStorage.getItem("gf_target"));
-  const timeframe = localStorage.getItem("gf_timeframe");
-
-  const riskLevel = document.getElementById("riskLevel").value;
-  const advancedMode = document.getElementById("advancedMode").value;
-
-  let rec;
-
-  if (advancedMode === "off") {
-    rec = chooseSimpleContract(direction, entry, timeframe);
-  } else {
-    rec = chooseAdvancedContract(direction, score, entry, stop, target, timeframe, riskLevel);
-  }
+  const typeText = direction === "call" ? "CALL (you think price will go up)" : "PUT (you think price will go down)";
 
   document.getElementById("optionsOutput").innerHTML = `
     <div class="result">
-      <h2>Recommended Options Contract</h2>
-      <p><strong>Type:</strong> ${rec.contractType}</p>
-      <p><strong>Strike:</strong> ${rec.strike}</p>
-      <p><strong>Expiration:</strong> ${rec.expiration}</p>
-      <h3>Reasoning</h3>
-      <ul>${rec.notes.map(n => `<li>${n}</li>`).join("")}</ul>
+      <h2>Simple Options Idea</h2>
+      <p><strong>Contract Type:</strong> ${typeText}</p>
+      <p><strong>Strike Price:</strong> Around ${entry.toFixed(2)} (the entry level from the first page).</p>
+      <p><strong>Expiration:</strong> ${expiration}</p>
+      <h3>Plain English Explanation</h3>
+      <ul>
+        <li>The first page found a very clear setup using moving averages, obvious bottoms/tops, and a strong bounce at an even number.</li>
+        <li>We use that same level as the “strike” area for the options contract.</li>
+        <li>We keep the stop loss idea simple on the chart (20% away), but here we just focus on the direction and level.</li>
+        <li>If it was a CALL setup, you are betting price will move up from that even number. If it was a PUT setup, you are betting price will move down from that even number.</li>
+      </ul>
+      <p class="note">This is a teaching tool. It does not guarantee profit. It just turns a simple chart idea into a simple options idea.</p>
     </div>
   `;
 }
