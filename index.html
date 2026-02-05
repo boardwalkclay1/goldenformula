@@ -13,21 +13,19 @@
   button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
   .section-box { border:1px solid #333; border-radius:6px; padding:10px; margin-top:10px; background:#0b0b12; }
-  .advanced-toggle { margin-top:20px; cursor:pointer; background:#11111a; border-radius:6px; padding:10px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center; }
-  .advanced-content { display:none; margin-top:10px; }
-  canvas { background:#0f0f16; border:1px solid #333; border-radius:6px; margin-top:15px; width:100%; max-width:950px; }
   .result { margin-top:20px; padding:15px; border-radius:8px; }
   .strong { background:#123822; border:1px solid #1f8b4c; }
   .decent { background:#3a3218; border:1px solid #8b6b1f; }
   .weak { background:#3a1823; border:1px solid #8b1f3a; }
+  canvas { background:#0f0f16; border:1px solid #333; border-radius:6px; margin-top:15px; width:100%; max-width:950px; }
 </style>
 </head>
 <body>
 
-<h2>Golden Formula – Setup Checker & Simulator</h2>
+<h2>Golden Formula – Setup Checker</h2>
 
 <div class="section-box">
-  <h3>Simple Mode</h3>
+  <h3>Inputs</h3>
 
   <label>Timeframe</label>
   <select id="timeframe">
@@ -50,138 +48,73 @@
   <label>200 EMA</label>
   <input id="ma200" type="number" step="0.01">
 
-  <label>Even Level Reaction?</label>
-  <select id="even">
-    <option value="no">No</option>
-    <option value="yes">Yes</option>
+  <label>Pattern</label>
+  <select id="pattern">
+    <option value="none">None</option>
+    <option value="roundingBottom">Rounding Bottom</option>
+    <option value="roundingTop">Rounding Top</option>
+    <option value="doubleBottom">Double Bottom</option>
+    <option value="doubleTop">Double Top</option>
+    <option value="bullFlag">Bull Flag</option>
+    <option value="bearFlag">Bear Flag</option>
   </select>
 
-  <label>Rounding Bottom / Top?</label>
-  <select id="roundingSimple">
-    <option value="none">None</option>
-    <option value="bottom">Rounding Bottom</option>
-    <option value="top">Rounding Top</option>
-  </select>
+  <label>Support</label>
+  <input id="support" type="number" step="0.01">
 
-  <label>Double Bottom / Top?</label>
-  <select id="doubleSimple">
-    <option value="none">None</option>
-    <option value="bottom">Double Bottom</option>
-    <option value="top">Double Top</option>
-  </select>
+  <label>Resistance</label>
+  <input id="resistance" type="number" step="0.01">
 
-  <label>Flag Pattern?</label>
-  <select id="flagTypeSimple">
-    <option value="none">None</option>
-    <option value="bull">Bull Flag</option>
-    <option value="bear">Bear Flag</option>
-  </select>
+  <label>Swing Low</label>
+  <input id="swingLow" type="number" step="0.01">
+
+  <label>Swing High</label>
+  <input id="swingHigh" type="number" step="0.01">
 </div>
 
-<div class="advanced-toggle" onclick="toggleAdvanced()">
-  <span><strong>Advanced Mode (Optional)</strong></span>
-  <span id="advArrow">▼</span>
-</div>
-
-<div id="advancedSection" class="advanced-content">
-  <div class="section-box">
-    <h3>Advanced – Structure</h3>
-    <label>Support</label><input id="support" type="number" step="0.01">
-    <label>Resistance</label><input id="resistance" type="number" step="0.01">
-    <label>Swing Low</label><input id="swingLow" type="number" step="0.01">
-    <label>Swing High</label><input id="swingHigh" type="number" step="0.01">
-  </div>
-
-  <div class="section-box">
-    <h3>Advanced – Pattern Evidence</h3>
-    <label>Double Bottom 1</label><input id="dbBottom1" type="number" step="0.01">
-    <label>Double Bottom 2</label><input id="dbBottom2" type="number" step="0.01">
-    <label>Neckline</label><input id="dbNeckline" type="number" step="0.01">
-
-    <label>Rounding Low 1</label><input id="rbLow1" type="number" step="0.01">
-    <label>Rounding Low 2</label><input id="rbLow2" type="number" step="0.01">
-    <label>Rounding Low 3</label><input id="rbLow3" type="number" step="0.01">
-  </div>
-
-  <div class="section-box">
-    <h3>Advanced – Manual Candles</h3>
-    <textarea id="manualCandles" placeholder="open,high,low,close per line"></textarea>
-  </div>
-</div>
-
-<button onclick="runApp()">Run Golden Formula</button>
+<button onclick="runFormula()">Run Golden Formula</button>
 
 <div id="output"></div>
 <canvas id="chart" width="950" height="320"></canvas>
 
-<button onclick="window.location.href='options.html'">Go to Options Contract Selector →</button>
+<button onclick="goToOptions()">Go to Options Selector →</button>
 
 <script>
-function toggleAdvanced() {
-  const sec = document.getElementById("advancedSection");
-  const arrow = document.getElementById("advArrow");
-  sec.style.display = sec.style.display === "block" ? "none" : "block";
-  arrow.textContent = sec.style.display === "block" ? "▲" : "▼";
-}
+function runFormula() {
+  const price = parseFloat(document.getElementById("price").value);
+  const ma20 = parseFloat(document.getElementById("ma20").value);
+  const ma50 = parseFloat(document.getElementById("ma50").value);
+  const ma200 = parseFloat(document.getElementById("ma200").value);
+  const pattern = document.getElementById("pattern").value;
+  const timeframe = document.getElementById("timeframe").value;
+  const support = parseFloat(document.getElementById("support").value);
+  const resistance = parseFloat(document.getElementById("resistance").value);
+  const swingLow = parseFloat(document.getElementById("swingLow").value);
+  const swingHigh = parseFloat(document.getElementById("swingHigh").value);
 
-function nearEven(price) {
-  const levels = [5,10,25,50,100];
-  for (let base of levels) {
-    let lvl = Math.round(price / base) * base;
-    if (Math.abs(price - lvl) <= 0.25) return true;
-  }
-  return false;
-}
+  let bull = 0;
+  let bear = 0;
 
-function parseManualCandles(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const candles = [];
-  for (let line of lines) {
-    const p = line.split(',').map(x => parseFloat(x.trim()));
-    if (p.length === 4 && p.every(v => !isNaN(v))) {
-      candles.push({open:p[0], high:p[1], low:p[2], close:p[3]});
-    }
-  }
-  return candles;
-}
+  if (price > ma20 && ma20 > ma50 && ma50 > ma200) bull += 3;
+  if (price < ma20 && ma20 < ma50 && ma50 < ma200) bear += 3;
 
-function autoGenerateLeftCandles(price, direction) {
-  const candles = [];
-  for (let i = 10; i > 0; i--) {
-    let t = i / 10;
-    let trendBias = direction === "bullish" ? 0.4 : direction === "bearish" ? -0.4 : 0;
-    let close = price - trendBias * i;
-    candles.unshift({
-      open: close - 0.2,
-      high: close + 0.4,
-      low: close - 0.4,
-      close
-    });
-  }
-  return candles;
-}
+  if (pattern === "roundingBottom") bull += 2;
+  if (pattern === "roundingTop") bear += 2;
+  if (pattern === "doubleBottom") bull += 2;
+  if (pattern === "doubleTop") bear += 2;
+  if (pattern === "bullFlag") bull += 2;
+  if (pattern === "bearFlag") bear += 2;
 
-function simulateFuture(score, price, timeframe, direction) {
-  let candles = [];
-  let baseSlope = score >= 8 ? 0.8 : score >= 4 ? 0.3 : 0.1;
-  if (direction === "bearish") baseSlope *= -1;
-  if (direction === "neutral") baseSlope = 0;
+  if (!isNaN(support) && price > support) bull += 1;
+  if (!isNaN(resistance) && price < resistance) bear += 1;
 
-  let tfScale = timeframe === "daily" ? 0.3 : timeframe === "4h" ? 0.5 : 1;
+  let direction = "neutral";
+  if (bull > bear && bull >= 3) direction = "bullish";
+  if (bear > bull && bear >= 3) direction = "bearish";
 
-  for (let i = 0; i < 20; i++) {
-    let close = price + baseSlope * (i / 5) * tfScale;
-    candles.push({
-      open: close - 0.2,
-      high: close + 0.5,
-      low: close - 0.5,
-      close
-    });
-  }
-  return candles;
-}
+  let score = Math.max(bull, bear);
+  if (score > 10) score = 10;
 
-function computeEntryStop(price, ma20, ma50, swingLow, swingHigh, direction) {
   let entry, stop;
   if (direction === "bullish") {
     entry = (ma20 + ma50) / 2;
@@ -193,146 +126,29 @@ function computeEntryStop(price, ma20, ma50, swingLow, swingHigh, direction) {
     entry = price;
     stop = price;
   }
-  return { entry: parseFloat(entry.toFixed(2)), stop: parseFloat(stop.toFixed(2)) };
-}
 
-function drawChart(left, future) {
-  const canvas = document.getElementById("chart");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  const all = left.concat(future);
-  if (!all.length) return;
-
-  let min = Math.min(...all.map(c => c.low));
-  let max = Math.max(...all.map(c => c.high));
-  if (max === min) { max += 1; min -= 1; }
-
-  const pad = 20;
-  const w = canvas.width;
-  const h = canvas.height;
-  const cw = (w - pad*2) / all.length;
-
-  function y(v) { return h - pad - ((v - min) / (max - min)) * (h - pad*2); }
-
-  ctx.fillStyle = "#0f0f16";
-  ctx.fillRect(0,0,w,h);
-
-  all.forEach((c,i)=>{
-    const x = pad + i*cw + cw/2;
-    ctx.strokeStyle = c.close >= c.open ? "#3cff9d" : "#ff4c84";
-    ctx.fillStyle = ctx.strokeStyle;
-
-    ctx.beginPath();
-    ctx.moveTo(x, y(c.high));
-    ctx.lineTo(x, y(c.low));
-    ctx.stroke();
-
-    const top = y(Math.max(c.open,c.close));
-    const bot = y(Math.min(c.open,c.close));
-    const bh = Math.max(2, bot-top);
-    ctx.fillRect(x - cw*0.3, top, cw*0.6, bh);
-  });
-}
-
-function runApp() {
-  const priceVal = parseFloat(document.getElementById("price").value);
-  const ma20Val = parseFloat(document.getElementById("ma20").value);
-  const ma50Val = parseFloat(document.getElementById("ma50").value);
-  const ma200Val = parseFloat(document.getElementById("ma200").value);
-  const timeframeVal = document.getElementById("timeframe").value;
-
-  if ([priceVal, ma20Val, ma50Val, ma200Val].some(v => isNaN(v))) {
-    document.getElementById("output").innerHTML = "<p>Please fill price and all EMAs.</p>";
-    return;
-  }
-
-  const roundingSel = document.getElementById("roundingSimple").value;
-  const doubleSel = document.getElementById("doubleSimple").value;
-  const flagSel = document.getElementById("flagTypeSimple").value;
-  const evenSel = document.getElementById("even").value;
-
-  const supportVal = parseFloat(document.getElementById("support").value);
-  const resistanceVal = parseFloat(document.getElementById("resistance").value);
-  const swingLowVal = parseFloat(document.getElementById("swingLow").value);
-  const swingHighVal = parseFloat(document.getElementById("swingHigh").value);
-
-  // Trend direction from EMAs
-  let trendScoreBull = 0;
-  let trendScoreBear = 0;
-
-  if (priceVal > ma20Val && ma20Val > ma50Val && ma50Val > ma200Val) trendScoreBull += 3;
-  if (priceVal < ma20Val && ma20Val < ma50Val && ma50Val < ma200Val) trendScoreBear += 3;
-
-  // Patterns
-  if (roundingSel === "bottom") trendScoreBull += 2;
-  if (roundingSel === "top") trendScoreBear += 2;
-
-  if (doubleSel === "bottom") trendScoreBull += 2;
-  if (doubleSel === "top") trendScoreBear += 2;
-
-  if (flagSel === "bull") trendScoreBull += 2;
-  if (flagSel === "bear") trendScoreBear += 2;
-
-  // Even level
-  if (evenSel === "yes" && nearEven(priceVal)) {
-    if (priceVal >= ma20Val) trendScoreBull += 1;
-    if (priceVal <= ma20Val) trendScoreBear += 1;
-  }
-
-  // Structure
-  if (!isNaN(supportVal) && priceVal > supportVal && priceVal - supportVal <= (priceVal * 0.01)) {
-    trendScoreBull += 2;
-  }
-  if (!isNaN(resistanceVal) && priceVal < resistanceVal && resistanceVal - priceVal <= (priceVal * 0.01)) {
-    trendScoreBear += 2;
-  }
-
-  // Final direction
-  let direction = "neutral";
-  if (trendScoreBull > trendScoreBear && trendScoreBull >= 3) direction = "bullish";
-  if (trendScoreBear > trendScoreBull && trendScoreBear >= 3) direction = "bearish";
-
-  // Score = max of the two
-  let score = Math.max(trendScoreBull, trendScoreBear);
-  if (score > 10) score = 10;
-
-  // Candles
-  const manualText = document.getElementById("manualCandles").value;
-  let leftCandles = parseManualCandles(manualText);
-  if (!leftCandles.length) {
-    leftCandles = autoGenerateLeftCandles(priceVal, direction);
-  }
-
-  const futureCandles = simulateFuture(score, priceVal, timeframeVal, direction);
-  drawChart(leftCandles, futureCandles);
-
-  const es = computeEntryStop(priceVal, ma20Val, ma50Val, swingLowVal, swingHighVal, direction);
-
-  let verdict;
-  if (direction === "bullish") {
-    verdict = score >= 8 ? "🔥 Strong Bullish Setup (CALL bias)" :
-              score >= 4 ? "⚠️ Decent Bullish Setup (CALL bias)" :
-              "❌ Weak Bullish Edge";
-  } else if (direction === "bearish") {
-    verdict = score >= 8 ? "🔥 Strong Bearish Setup (PUT bias)" :
-              score >= 4 ? "⚠️ Decent Bearish Setup (PUT bias)" :
-              "❌ Weak Bearish Edge";
-  } else {
-    verdict = "❌ No Clear Direction";
-  }
-
-  const cls = score >= 8 ? "strong" : score >= 4 ? "decent" : "weak";
+  entry = parseFloat(entry.toFixed(2));
+  stop = parseFloat(stop.toFixed(2));
 
   document.getElementById("output").innerHTML = `
-    <div class="result ${cls}">
-      <h3>${verdict}</h3>
-      <p><strong>Direction:</strong> ${direction}</p>
+    <div class="result">
+      <h3>Direction: ${direction}</h3>
       <p><strong>Score:</strong> ${score}</p>
-      <p><strong>Suggested Entry:</strong> ${es.entry}</p>
-      <p><strong>Suggested Stop:</strong> ${es.stop}</p>
+      <p><strong>Entry:</strong> ${entry}</p>
+      <p><strong>Stop:</strong> ${stop}</p>
     </div>
   `;
+
+  // SAVE TO LOCAL STORAGE FOR OPTIONS PAGE
+  localStorage.setItem("gf_direction", direction);
+  localStorage.setItem("gf_score", score);
+  localStorage.setItem("gf_entry", entry);
+  localStorage.setItem("gf_stop", stop);
+  localStorage.setItem("gf_timeframe", timeframe);
+}
+
+function goToOptions() {
+  window.location.href = "options.html";
 }
 </script>
 
