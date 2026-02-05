@@ -2,362 +2,242 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Golden Formula – Advanced Setup Engine</title>
+<title>Golden Formula – Simple Setup Finder</title>
 <style>
-  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:1100px; margin:0 auto; }
+  body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
   h1 { color:#ff2b6a; }
-  h2 { color:#ff9ac0; margin-top:25px; }
+  h2 { color:#ff9ac0; margin-top:20px; }
   label { display:block; margin-top:8px; font-size:13px; }
-  input, select, textarea { padding:7px; margin-top:3px; width:100%; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
-  textarea { min-height:70px; font-family:monospace; }
-  button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
+  input, select, textarea { width:100%; padding:7px; margin-top:3px; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
+  button { width:100%; padding:10px; margin-top:15px; border:none; border-radius:4px; background:#ff2b6a; color:#fff; font-weight:bold; cursor:pointer; }
   button:hover { background:#ff4c84; }
-  .section-box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
+  .box { border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; background:#0b0b12; }
   .note { font-size:11px; color:#b0b0c0; margin-top:3px; }
-  .result { margin-top:20px; padding:15px; border-radius:8px; }
-  .strong { background:#123822; border:1px solid #1f8b4c; }
-  .decent { background:#3a3218; border:1px solid #8b6b1f; }
-  .weak { background:#3a1823; border:1px solid #8b1f3a; }
-  canvas { background:#0f0f16; border:1px solid #333; border-radius:6px; margin-top:15px; width:100%; max-width:1050px; }
-  .pill { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; margin-right:4px; margin-top:4px; }
-  .pill-bull { background:#123822; border:1px solid #1f8b4c; }
-  .pill-bear { background:#3a1823; border:1px solid #8b1f3a; }
-  .pill-neutral { background:#222233; border:1px solid #555577; }
+  .result { margin-top:15px; padding:12px; border-radius:6px; background:#123822; border:1px solid #1f8b4c; }
+  ul { margin-top:6px; }
 </style>
 </head>
 <body>
 
-<h1>Golden Formula – Advanced Setup Engine</h1>
+<h1>Golden Formula – Simple Setup Finder</h1>
 <p class="note">
-  This page scores the setup, determines bull/put bias, calculates entry & stop, estimates R:R, and exports everything to the options page.
+  This page is for people who don’t know the market. It looks for very obvious “bounce” setups only.
 </p>
 
-<div class="section-box">
-  <h2>1. Market Context & Price Structure</h2>
+<div class="box">
+  <h2>1. Basic Info</h2>
 
   <label>Timeframe
-    <span class="note">Higher timeframes = stronger signals, slower moves.</span>
+    <span class="note">Pick the chart you are looking at.</span>
   </label>
   <select id="timeframe">
-    <option value="5m">5m (scalps)</option>
-    <option value="15m">15m</option>
-    <option value="1h">1h</option>
-    <option value="4h">4h</option>
-    <option value="daily">Daily swing</option>
+    <option value="5m">5 minutes</option>
+    <option value="15m">15 minutes</option>
+    <option value="1h">1 hour</option>
+    <option value="4h">4 hours</option>
+    <option value="daily">Daily</option>
   </select>
 
   <label>Current Price
-    <span class="note">Last traded price of the underlying.</span>
+    <span class="note">The price you see right now.</span>
   </label>
   <input id="price" type="number" step="0.01">
 
-  <label>20 EMA
-    <span class="note">Short‑term trend / momentum.</span>
+  <label>Fast Moving Average (20)
+    <span class="note">Use a 20‑period moving average on your chart.</span>
   </label>
-  <input id="ma20" type="number" step="0.01">
+  <input id="maFast" type="number" step="0.01">
 
-  <label>50 EMA
-    <span class="note">Intermediate trend.</span>
+  <label>Slow Moving Average (50)
+    <span class="note">Use a 50‑period moving average on your chart.</span>
   </label>
-  <input id="ma50" type="number" step="0.01">
-
-  <label>200 EMA
-    <span class="note">Macro trend / bias.</span>
-  </label>
-  <input id="ma200" type="number" step="0.01">
-
-  <label>Key Support
-    <span class="note">Major demand level below price (for longs) or already broken (for shorts).</span>
-  </label>
-  <input id="support" type="number" step="0.01">
-
-  <label>Key Resistance
-    <span class="note">Major supply level above price (for shorts) or already broken (for longs).</span>
-  </label>
-  <input id="resistance" type="number" step="0.01">
+  <input id="maSlow" type="number" step="0.01">
 </div>
 
-<div class="section-box">
-  <h2>2. Pattern Evidence (User‑Confirmed)</h2>
+<div class="box">
+  <h2>2. Highs, Lows & Pattern</h2>
 
-  <label>Primary Pattern
-    <span class="note">You confirm what you actually see on the chart.</span>
-  </label>
-  <select id="pattern">
-    <option value="none">None / unclear</option>
-    <option value="roundingBottom">Rounding Bottom</option>
-    <option value="roundingTop">Rounding Top</option>
-    <option value="doubleBottom">Double Bottom</option>
-    <option value="doubleTop">Double Top</option>
-    <option value="bullFlag">Bull Flag</option>
-    <option value="bearFlag">Bear Flag</option>
-  </select>
-
-  <label>Is price reacting at an even level? (e.g. 100, 150, 200)
-    <span class="note">Psychological levels often act as magnets and turning points.</span>
-  </label>
-  <select id="even">
-    <option value="no">No / not important</option>
-    <option value="yes">Yes, clear reaction</option>
-  </select>
-
-  <label>Swing Low (for longs)
-    <span class="note">Last obvious higher low you’d hide a stop under.</span>
+  <label>Last Swing Low
+    <span class="note">The last clear “bottom” before price moved up.</span>
   </label>
   <input id="swingLow" type="number" step="0.01">
 
-  <label>Swing High (for shorts)
-    <span class="note">Last obvious lower high you’d hide a stop above.</span>
+  <label>Last Swing High
+    <span class="note">The last clear “top” before price moved down.</span>
   </label>
   <input id="swingHigh" type="number" step="0.01">
+
+  <label>What pattern do you see?</label>
+  <select id="pattern">
+    <option value="none">Nothing clear</option>
+    <option value="doubleBottom">Double Bottom (two bottoms at same area)</option>
+    <option value="roundingBottom">Rounding Bottom (U‑shape)</option>
+    <option value="doubleTop">Double Top (two tops at same area)</option>
+    <option value="roundingTop">Rounding Top (upside‑down U)</option>
+  </select>
+
+  <p class="note">
+    Examples:<br>
+    • Double Bottom: price drops, bounces, drops again to almost the same low, then bounces hard.<br>
+    • Rounding Bottom: price slowly curves like a “U” and then starts rising.<br>
+    • Double Top: price rises, falls, rises again to almost the same high, then falls hard.<br>
+    • Rounding Top: price slowly curves like an upside‑down “U” and then starts falling.
+  </p>
 </div>
 
-<div class="section-box">
-  <h2>3. Optional – Manual Candles (Custom History)</h2>
-  <label>Candles (open,high,low,close per line)
-    <span class="note">If left empty, the engine auto‑simulates a plausible history based on your bias.</span>
+<div class="box">
+  <h2>3. Reversal Candle & Even Number</h2>
+
+  <label>Did you see a strong reversal candle at the low or high?
+    <span class="note">For example: a long wick rejecting the level.</span>
   </label>
-  <textarea id="manualCandles" placeholder="e.g. 99.5,100.2,99.1,100.0"></textarea>
+  <select id="reversal">
+    <option value="no">No</option>
+    <option value="yes">Yes, very clear</option>
+  </select>
+
+  <label>Did this happen at a “clean” even number?
+    <span class="note">Example: 100, 105, 110, 150, 200, etc.</span>
+  </label>
+  <select id="evenReaction">
+    <option value="no">No</option>
+    <option value="yes">Yes, price clearly reacted there</option>
+  </select>
 </div>
 
-<button onclick="runFormula()">Run Golden Formula</button>
+<button onclick="runFormula()">Find Setup</button>
 
 <div id="output"></div>
-<canvas id="chart" width="1050" height="320"></canvas>
 
-<button onclick="goToOptions()">Go to Options Selector →</button>
+<button onclick="goToOptions()">Go to Options Page →</button>
 
 <script>
-// ---------- CORE HELPERS ----------
-function nearEven(price) {
-  const levels = [5,10,25,50,100];
-  for (let base of levels) {
-    let lvl = Math.round(price / base) * base;
-    if (Math.abs(price - lvl) <= price * 0.0025) return true; // ~0.25% band
-  }
-  return false;
+function nearestEvenLevel(price) {
+  // nearest multiple of 5
+  const level = Math.round(price / 5) * 5;
+  return level;
 }
 
-function parseManualCandles(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const candles = [];
-  for (let line of lines) {
-    const p = line.split(',').map(x => parseFloat(x.trim()));
-    if (p.length === 4 && p.every(v => !isNaN(v))) {
-      candles.push({open:p[0], high:p[1], low:p[2], close:p[3]});
-    }
-  }
-  return candles;
+function nextEvenUp(price) {
+  return Math.ceil(price / 5) * 5;
 }
 
-// ---------- AUTO HISTORY & FUTURE ----------
-function autoGenerateLeftCandles(price, direction) {
-  const candles = [];
-  for (let i = 12; i > 0; i--) {
-    let trendBias = direction === "bullish" ? 0.5 : direction === "bearish" ? -0.5 : 0;
-    let noise = (Math.random() - 0.5) * 0.6;
-    let close = price - trendBias * i + noise;
-    candles.unshift({
-      open: close - 0.2,
-      high: close + 0.4,
-      low: close - 0.4,
-      close
-    });
-  }
-  return candles;
+function nextEvenDown(price) {
+  return Math.floor(price / 5) * 5;
 }
 
-function simulateFuture(score, price, timeframe, direction) {
-  const candles = [];
-  let baseSlope = score >= 8 ? 1.0 : score >= 5 ? 0.5 : 0.15;
-  if (direction === "bearish") baseSlope *= -1;
-  if (direction === "neutral") baseSlope = 0;
-
-  let tfScale = timeframe === "daily" ? 0.3 : timeframe === "4h" ? 0.5 : 1;
-
-  for (let i = 0; i < 20; i++) {
-    let noise = (Math.random() - 0.5) * 0.4;
-    let close = price + baseSlope * (i / 4) * tfScale + noise;
-    candles.push({
-      open: close - 0.2,
-      high: close + 0.5,
-      low: close - 0.5,
-      close
-    });
-  }
-  return candles;
-}
-
-// ---------- ENTRY / STOP / R:R ----------
-function computeEntryStop(price, ma20, ma50, swingLow, swingHigh, direction) {
-  let entry, stop;
-  if (direction === "bullish") {
-    entry = (ma20 + ma50) / 2;
-    stop = !isNaN(swingLow) ? swingLow * 0.99 : price * 0.97;
-  } else if (direction === "bearish") {
-    entry = (ma20 + ma50) / 2;
-    stop = !isNaN(swingHigh) ? swingHigh * 1.01 : price * 1.03;
-  } else {
-    entry = price;
-    stop = price;
-  }
-  entry = parseFloat(entry.toFixed(2));
-  stop = parseFloat(stop.toFixed(2));
-
-  let riskPerShare = Math.abs(entry - stop);
-  let targetMove = riskPerShare * 2; // default 2R target
-  let target = direction === "bullish" ? entry + targetMove : direction === "bearish" ? entry - targetMove : entry;
-  target = parseFloat(target.toFixed(2));
-  let rr = riskPerShare === 0 ? 0 : Math.abs(target - entry) / riskPerShare;
-
-  return { entry, stop, target, rr: parseFloat(rr.toFixed(2)) };
-}
-
-// ---------- CHART ----------
-function drawChart(left, future) {
-  const canvas = document.getElementById("chart");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  const all = left.concat(future);
-  if (!all.length) return;
-
-  let min = Math.min(...all.map(c => c.low));
-  let max = Math.max(...all.map(c => c.high));
-  if (max === min) { max += 1; min -= 1; }
-
-  const pad = 20;
-  const w = canvas.width;
-  const h = canvas.height;
-  const cw = (w - pad*2) / all.length;
-
-  function y(v) { return h - pad - ((v - min) / (max - min)) * (h - pad*2); }
-
-  ctx.fillStyle = "#0f0f16";
-  ctx.fillRect(0,0,w,h);
-
-  all.forEach((c,i)=>{
-    const x = pad + i*cw + cw/2;
-    ctx.strokeStyle = c.close >= c.open ? "#3cff9d" : "#ff4c84";
-    ctx.fillStyle = ctx.strokeStyle;
-
-    ctx.beginPath();
-    ctx.moveTo(x, y(c.high));
-    ctx.lineTo(x, y(c.low));
-    ctx.stroke();
-
-    const top = y(Math.max(c.open,c.close));
-    const bot = y(Math.min(c.open,c.close));
-    const bh = Math.max(2, bot-top);
-    ctx.fillRect(x - cw*0.3, top, cw*0.6, bh);
-  });
-}
-
-// ---------- MAIN ENGINE ----------
 function runFormula() {
-  const price = parseFloat(document.getElementById("price").value);
-  const ma20 = parseFloat(document.getElementById("ma20").value);
-  const ma50 = parseFloat(document.getElementById("ma50").value);
-  const ma200 = parseFloat(document.getElementById("ma200").value);
-  const pattern = document.getElementById("pattern").value;
   const timeframe = document.getElementById("timeframe").value;
-  const support = parseFloat(document.getElementById("support").value);
-  const resistance = parseFloat(document.getElementById("resistance").value);
+  const price = parseFloat(document.getElementById("price").value);
+  const maFast = parseFloat(document.getElementById("maFast").value);
+  const maSlow = parseFloat(document.getElementById("maSlow").value);
   const swingLow = parseFloat(document.getElementById("swingLow").value);
   const swingHigh = parseFloat(document.getElementById("swingHigh").value);
-  const even = document.getElementById("even").value;
+  const pattern = document.getElementById("pattern").value;
+  const reversal = document.getElementById("reversal").value;
+  const evenReaction = document.getElementById("evenReaction").value;
 
-  if ([price, ma20, ma50, ma200].some(v => isNaN(v))) {
-    document.getElementById("output").innerHTML = "<p>Please fill price and all EMAs.</p>";
+  if ([price, maFast, maSlow].some(v => isNaN(v))) {
+    document.getElementById("output").innerHTML = "<p>Please fill price and both moving averages.</p>";
     return;
   }
 
-  let bull = 0;
-  let bear = 0;
-  const tags = [];
+  let direction = "none";
+  let reasons = [];
 
-  // Trend stack
-  if (price > ma20 && ma20 > ma50 && ma50 > ma200) { bull += 4; tags.push('<span class="pill pill-bull">Bullish EMA stack</span>'); }
-  if (price < ma20 && ma20 < ma50 && ma50 < ma200) { bear += 4; tags.push('<span class="pill pill-bear">Bearish EMA stack</span>'); }
-
-  // Pattern
-  if (pattern === "roundingBottom") { bull += 2; tags.push('<span class="pill pill-bull">Rounding bottom</span>'); }
-  if (pattern === "roundingTop") { bear += 2; tags.push('<span class="pill pill-bear">Rounding top</span>'); }
-  if (pattern === "doubleBottom") { bull += 2; tags.push('<span class="pill pill-bull">Double bottom</span>'); }
-  if (pattern === "doubleTop") { bear += 2; tags.push('<span class="pill pill-bear">Double top</span>'); }
-  if (pattern === "bullFlag") { bull += 2; tags.push('<span class="pill pill-bull">Bull flag</span>'); }
-  if (pattern === "bearFlag") { bear += 2; tags.push('<span class="pill pill-bear">Bear flag</span>'); }
-
-  // Even level
-  if (even === "yes" && nearEven(price)) {
-    if (price >= ma20) { bull += 1; tags.push('<span class="pill pill-bull">Even level support</span>'); }
-    if (price <= ma20) { bear += 1; tags.push('<span class="pill pill-bear">Even level resistance</span>'); }
-  }
-
-  // Structure
-  if (!isNaN(support) && price > support && price - support <= price * 0.01) {
-    bull += 2; tags.push('<span class="pill pill-bull">Sitting on support</span>');
-  }
-  if (!isNaN(resistance) && price < resistance && resistance - price <= price * 0.01) {
-    bear += 2; tags.push('<span class="pill pill-bear">Under resistance</span>');
-  }
-
-  // Final direction & score
-  let direction = "neutral";
-  if (bull > bear && bull >= 4) direction = "bullish";
-  if (bear > bull && bear >= 4) direction = "bearish";
-
-  let score = Math.max(bull, bear);
-  if (score > 10) score = 10;
-
-  // Entry / stop / target / R:R
-  const es = computeEntryStop(price, ma20, ma50, swingLow, swingHigh, direction);
-
-  // Candles
-  const manualText = document.getElementById("manualCandles").value;
-  let leftCandles = parseManualCandles(manualText);
-  if (!leftCandles.length) leftCandles = autoGenerateLeftCandles(price, direction);
-  const futureCandles = simulateFuture(score, price, timeframe, direction);
-  drawChart(leftCandles, futureCandles);
-
-  // Verdict text
-  let verdict;
-  if (direction === "bullish") {
-    verdict = score >= 8 ? "🔥 Strong Bullish Setup (CALL bias)" :
-              score >= 5 ? "⚠️ Moderate Bullish Setup" :
-              "❌ Weak Bullish Edge";
-  } else if (direction === "bearish") {
-    verdict = score >= 8 ? "🔥 Strong Bearish Setup (PUT bias)" :
-              score >= 5 ? "⚠️ Moderate Bearish Setup" :
-              "❌ Weak Bearish Edge";
+  // Trend from moving averages only
+  if (maFast > maSlow && price > maFast) {
+    direction = "call";
+    reasons.push("Fast moving average is above the slow one and price is above both → uptrend.");
+  } else if (maFast < maSlow && price < maFast) {
+    direction = "put";
+    reasons.push("Fast moving average is below the slow one and price is below both → downtrend.");
   } else {
-    verdict = "❌ No Clear Direction – treat as chop.";
+    direction = "none";
+    reasons.push("Moving averages do not clearly show up or down. No clear trend.");
   }
 
-  const cls = score >= 8 ? "strong" : score >= 5 ? "decent" : "weak";
+  // Pattern filter – only obvious setups
+  let patternOk = false;
+  if (direction === "call" && (pattern === "doubleBottom" || pattern === "roundingBottom")) {
+    patternOk = true;
+    reasons.push("You marked an obvious bottom pattern (double bottom or rounding bottom).");
+  }
+  if (direction === "put" && (pattern === "doubleTop" || pattern === "roundingTop")) {
+    patternOk = true;
+    reasons.push("You marked an obvious top pattern (double top or rounding top).");
+  }
+  if (!patternOk) {
+    reasons.push("Pattern does not match the trend direction or is not clear.");
+  }
+
+  // Reversal candle + even number filter
+  if (reversal === "yes") {
+    reasons.push("You saw a strong reversal candle at the turning point.");
+  } else {
+    reasons.push("No strong reversal candle confirmed.");
+  }
+
+  if (evenReaction === "yes") {
+    const level = nearestEvenLevel(price);
+    reasons.push("Price reacted at a clean even number around " + level + ".");
+  } else {
+    reasons.push("No clear reaction at an even number.");
+  }
+
+  // Only allow trade if: direction clear + patternOk + reversal + evenReaction
+  let valid = (direction !== "none" && patternOk && reversal === "yes" && evenReaction === "yes");
+
+  let entry = null;
+  let stop = null;
+
+  if (valid) {
+    if (direction === "call") {
+      entry = nextEvenUp(price);
+      stop = parseFloat((entry * 0.8).toFixed(2)); // 20% stop
+      reasons.push("This is a CALL idea. Enter at the next even number above: " + entry + ".");
+      reasons.push("Stop loss is 20% below entry: " + stop + ".");
+    } else if (direction === "put") {
+      entry = nextEvenDown(price);
+      stop = parseFloat((entry * 1.2).toFixed(2)); // 20% stop above
+      reasons.push("This is a PUT idea. Enter at the next even number below: " + entry + ".");
+      reasons.push("Stop loss is 20% above entry: " + stop + ".");
+    }
+  }
+
+  if (!valid) {
+    document.getElementById("output").innerHTML = `
+      <div class="result">
+        <h2>No Trade – Setup Not Obvious Enough</h2>
+        <p>We only want very clear, simple setups. This one does not pass all checks.</p>
+        <h3>Why:</h3>
+        <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+      </div>
+    `;
+    // still save neutral info
+    localStorage.setItem("gf_direction", "none");
+    localStorage.setItem("gf_entry", "");
+    localStorage.setItem("gf_stop", "");
+    localStorage.setItem("gf_timeframe", timeframe);
+    return;
+  }
 
   document.getElementById("output").innerHTML = `
-    <div class="result ${cls}">
-      <h2>Setup Summary</h2>
-      <p><strong>Verdict:</strong> ${verdict}</p>
-      <p><strong>Direction:</strong> ${direction}</p>
-      <p><strong>Score (0–10):</strong> ${score}</p>
-      <p><strong>Entry:</strong> ${es.entry}</p>
-      <p><strong>Stop:</strong> ${es.stop}</p>
-      <p><strong>Target (2R default):</strong> ${es.target}</p>
-      <p><strong>Approx. R:R:</strong> ${es.rr}:1</p>
-      <p><strong>Evidence:</strong> ${tags.length ? tags.join(" ") : '<span class="pill pill-neutral">No strong pattern evidence</span>'}</p>
-      <p class="note">These values are exported to the options page to choose the contract that best matches this setup.</p>
+    <div class="result">
+      <h2>Trade Idea Found</h2>
+      <p><strong>Type:</strong> ${direction === "call" ? "CALL (bet on up)" : "PUT (bet on down)"}</p>
+      <p><strong>Suggested Entry:</strong> ${entry}</p>
+      <p><strong>Stop Loss (20%):</strong> ${stop}</p>
+      <h3>Why this setup:</h3>
+      <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+      <p class="note">You will see a matching options suggestion on the next page.</p>
     </div>
   `;
 
-  // EXPORT TO OPTIONS PAGE
+  // Save for options page
   localStorage.setItem("gf_direction", direction);
-  localStorage.setItem("gf_score", score);
-  localStorage.setItem("gf_entry", es.entry);
-  localStorage.setItem("gf_stop", es.stop);
-  localStorage.setItem("gf_target", es.target);
-  localStorage.setItem("gf_rr", es.rr);
+  localStorage.setItem("gf_entry", entry);
+  localStorage.setItem("gf_stop", stop);
   localStorage.setItem("gf_timeframe", timeframe);
 }
 
