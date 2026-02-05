@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Golden Formula Setup Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; background:#0b0b0f; color:#f5f5f5; padding:20px; max-width:600px; margin:0 auto; }
+        h2 { color:#ff2b6a; }
+        label { display:block; margin-top:10px; font-size:14px; }
+        input, select { padding:8px; margin-top:4px; width:100%; border-radius:4px; border:1px solid #333; background:#15151b; color:#f5f5f5; }
+        button { padding:10px; background:#ff2b6a; color:white; border:none; width:100%; margin-top:15px; border-radius:4px; font-weight:bold; cursor:pointer; }
+        button:hover { background:#ff4c84; }
+        .result { margin-top:20px; padding:15px; border-radius:8px; }
+        .strong { background:#123822; border:1px solid #1f8b4c; }
+        .decent { background:#3a3218; border:1px solid #8b6b1f; }
+        .weak { background:#3a1823; border:1px solid #8b1f3a; }
+        ul { padding-left:20px; }
+        pre { white-space:pre-wrap; word-wrap:break-word; }
+        small { color:#aaa; font-size:11px; }
+    </style>
+</head>
+<body>
+
+<h2>Golden Formula Setup Checker</h2>
+<small>This is a logic-based decision tool. It does not place trades or connect to any broker.</small>
+
+<label>Timeframe</label>
+<select id="timeframe">
+    <option value="5m">5m</option>
+    <option value="15m">15m</option>
+    <option value="1h">1h</option>
+    <option value="4h">4h</option>
+    <option value="daily">Daily</option>
+</select>
+
+<label>Current Price</label>
+<input id="price" type="number" step="0.01">
+
+<label>20 EMA</label>
+<input id="ma20" type="number" step="0.01">
+
+<label>50 EMA</label>
+<input id="ma50" type="number" step="0.01">
+
+<label>200 EMA</label>
+<input id="ma200" type="number" step="0.01">
+
+<label>Is price reacting to a clean even level (10, 20, 25, 50, 100, etc.)?</label>
+<select id="even">
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+</select>
+
+<label>Do you see a rounding bottom forming/formed?</label>
+<select id="rounding">
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+</select>
+
+<label>Do you see a clear double bottom pattern?</label>
+<select id="double">
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+</select>
+
+<button onclick="checkSetup()">Check Setup</button>
+
+<div id="output"></div>
+
+<script>
+function nearEven(price) {
+    const levels = [5,10,25,50,100];
+    for (let base of levels) {
+        let lvl = Math.round(price / base) * base;
+        if (Math.abs(price - lvl) <= 0.25) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function simulateFuture(score, price, ma20, ma50, ma200, rounding, doubleBottom, timeframe) {
+    let candles = [];
+    let base = price;
+
+    // Trend strength -> slope
+    let slope = 0;
+    if (score >= 7) slope = 0.8;
+    else if (score >= 4) slope = 0.3;
+    else slope = -0.2;
+
+    // Timeframe volatility scaling
+    let tfScale = 1;
+    if (timeframe === "4h") tfScale = 0.5;
+    if (timeframe === "daily") tfScale = 0.3;
+
+    // Pattern effects
+    let roundingBoost = rounding ? 0.4 : 0;
+    let doubleBoost = doubleBottom ? 0.6 : 0;
+
+    // Even level bounce
+    let evenBounce = nearEven(price) ? 0.5 : 0;
+
+    // Deterministic future path (no randomness)
+    for (let i = 0; i < 20; i++) {
+        let trendComponent = slope * (i / 5) * tfScale;
+        let patternComponent = roundingBoost * Math.sin(i / 3);
+        let breakoutComponent = doubleBoost * (i > 5 ? (i - 5) / 5 : 0);
+        let bounceComponent = evenBounce * Math.cos(i / 4);
+
+        let next = base +
+            trendComponent +
+            patternComponent +
+            breakoutComponent +
+            bounceComponent;
+
+        candles.push(next.toFixed(2));
+    }
+
+    return candles;
+}
+
+function checkSetup() {
+    let timeframe = document.getElementById("timeframe").value;
+    let price = parseFloat(document.getElementById("price").value);
+    let ma20 = parseFloat(document.getElementById("ma20").value);
+    let ma50 = parseFloat(document.getElementById("ma50").value);
+    let ma200 = parseFloat(document.getElementById("ma200").value);
+
+    if (isNaN(price) || isNaN(ma20) || isNaN(ma50) || isNaN(ma200)) {
+        document.getElementById("output").innerHTML =
+            "<p>Please fill in all numeric fields.</p>";
+        return;
+    }
+
+    let even = document.getElementById("even").value === "yes";
+    let rounding = document.getElementById("rounding").value === "yes";
+    let doubleBottom = document.getElementById("double").value === "yes";
+
+    let score = 0;
+    let reasons = [];
+
+    // Trend logic (your MA structure)
+    if (price > ma20 && ma20 > ma50 && ma50 > ma200) {
+        score += 3;
+        reasons.push("Strong uptrend: price > 20 > 50 > 200.");
+    } else if (price > ma20 && ma20 > ma50) {
+        score += 2;
+        reasons.push("Uptrend: price above 20 & 50, EMAs stacked bullish.");
+    } else if (ma20 > ma50 && ma50 > ma200 && price > ma50) {
+        score += 1;
+        reasons.push("Early uptrend: EMAs bullish, price above 50.");
+    } else {
+        reasons.push("Trend not clearly bullish based on EMAs.");
+    }
+
+    // Pullback zone (20–50 area)
+    if (price >= ma20 && price <= ma50 * 1.02) {
+        score += 1;
+        reasons.push("Price near 20–50 zone (healthy pullback area).");
+    }
+
+    // Even level logic (psychological level)
+    if (even || nearEven(price)) {
+        score += 2;
+        reasons.push("Price near key even/psychological level.");
+    }
+
+    // Patterns
+    if (rounding) {
+        score += 2;
+        reasons.push("Rounding bottom pattern present (reversal structure).");
+    }
+    if (doubleBottom) {
+        score += 2;
+        reasons.push("Double bottom pattern present (strong reversal signal).");
+    }
+
+    // Timeframe weighting
+    if (timeframe === "4h" || timeframe === "daily") {
+        score += 1;
+        reasons.push("Higher timeframe context (more reliable).");
+    }
+
+    // Final verdict
+    let verdict = "";
+    let cssClass = "";
+
+    if (score >= 7) {
+        verdict = "🔥 Strong Buy Setup (according to your formula).";
+        cssClass = "strong";
+    } else if (score >= 4) {
+        verdict = "⚠️ Decent but Imperfect Setup. Some conditions are good, some are missing.";
+        cssClass = "decent";
+    } else {
+        verdict = "❌ No Trade Setup. Too many key conditions are missing.";
+        cssClass = "weak";
+    }
+
+    // Logic-based future simulation
+    let future = simulateFuture(
+        score,
+        price,
+        ma20,
+        ma50,
+        ma200,
+        rounding,
+        doubleBottom,
+        timeframe
+    );
+
+    // Build output HTML
+    let html = `<div class="result ${cssClass}">
+        <h3>${verdict}</h3>
+        <p><strong>Score:</strong> ${score}</p>
+        <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+        <h4>Simulated Future Path (Logic-Based)</h4>
+        <pre style="background:#15151b; padding:10px; border-radius:6px;">
+${future.join("  ")}
+        </pre>
+        <small>Same inputs will always produce the same simulated path. This is a logic scenario, not a price prediction.</small>
+    </div>`;
+
+    document.getElementById("output").innerHTML = html;
+}
+</script>
+
+</body>
+</html>
