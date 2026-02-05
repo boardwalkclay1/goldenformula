@@ -1,320 +1,36 @@
+<!-- simulator.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Golden Formula – Simulator</title>
+  <title>Golden Simulator</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 </head>
-<body>
-  <header class="gf-header">
-    <h1>Golden Formula – Simulator</h1>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="golden-rules.html">Golden Rules</a>
-      <a href="glossary.html">Glossary</a>
-      <a href="brokers.html">Brokers & Accounts</a>
-    </nav>
-  </header>
+<body class="gold-theme">
+  <main class="layout">
+    <section class="left">
+      <h1>Golden Simulator</h1>
 
-  <main>
-    <section class="gf-hero">
-      <h2>See the Move as a Story</h2>
-      <p>
-        This simulator takes the Golden Formula data (price, moving averages, highs, lows, direction)
-        and turns it into a visual story: past candles, a “NOW” line, and a predicted route based on
-        the same simple rules.
-      </p>
+      <div id="drop-zone" class="drop-zone">
+        <p>Drag & drop Webull chart screenshot here<br>or click to upload.</p>
+      </div>
+      <input type="file" id="file-input" accept="image/*" style="display:none;">
+
+      <p id="sim-status"></p>
+
+      <div id="sim-output"></div>
+
+      <h3>Logic Log</h3>
+      <pre id="sim-log"></pre>
     </section>
 
-    <section class="gf-tool">
-      <h2>Setup From Golden Formula</h2>
-      <div id="setupBox" class="gf-trade-alive"></div>
-
-      <h2>1. Screenshot or text (optional override)</h2>
-      <label>Upload chart screenshot</label>
-      <input type="file" id="imageInput" accept="image/*">
-      <p class="note" id="ocrStatus">No image loaded yet.</p>
-
-      <label>Or paste chart text</label>
-      <textarea id="pasteBox" placeholder="Paste your chart text or let the screenshot fill this."></textarea>
-
-      <label>View mode</label>
-      <select id="viewMode">
-        <option value="real">Real‑style candles (with wicks)</option>
-        <option value="simple">Simple block candles</option>
-        <option value="line">Line only (no candles)</option>
-      </select>
-
-      <button id="runSimBtn">Run Simulator</button>
-    </section>
-
-    <section class="gf-tool">
-      <canvas id="chart" width="960" height="360"></canvas>
-      <div id="explanation" class="result"></div>
-    </section>
-
-    <section class="gf-links">
-      <button onclick="window.location.href='index.html'">← Back to Home</button>
-      <button onclick="window.location.href='options.html'">Go to Options Picker →</button>
+    <section class="right">
+      <canvas id="sim-canvas" width="900" height="400"></canvas>
     </section>
   </main>
 
-  <script type="module">
-    import { parseChartText, autoCorrectNumber, runGoldenFormula } from './modules/core.js';
-    import { attachAutoOCR } from './modules/ocr.js';
-
-    // ----- load setup from other pages (localStorage) -----
-    function loadSetupBox() {
-      const direction = localStorage.getItem("gf_direction") || "none";
-      const entry     = localStorage.getItem("gf_entry") || "";
-      const stop      = localStorage.getItem("gf_stop") || "";
-      const price     = localStorage.getItem("gf_price") || "";
-      const tf        = localStorage.getItem("gf_timeframe") || "unknown";
-
-      document.getElementById("setupBox").innerHTML = `
-        <p><strong>Type:</strong> ${
-          direction === "call" ? "CALL (bet on up)" :
-          direction === "put" ? "PUT (bet on down)" :
-          "No trade"
-        }</p>
-        <p><strong>Entry (even number):</strong> ${entry || "—"}</p>
-        <p><strong>Chart Stop (20% idea):</strong> ${stop || "—"}</p>
-        <p><strong>Current Price:</strong> ${price || "—"}</p>
-        <p><strong>Timeframe:</strong> ${tf}</p>
-        <p class="note">
-          The simulator will use this as the base. You can override it with a screenshot or pasted text.
-        </p>
-      `;
-    }
-
-    // ----- analysis logic for simulator (reuses Golden Formula brain) -----
-    function analyzeForSimulation(data) {
-      const directionStored = localStorage.getItem("gf_direction") || "none";
-      const pattern = "none";          // simulator doesn’t re‑ask pattern
-      const reversal = "yes";          // assume we’re simulating a confirmed turn
-      const evenReaction = "yes";      // assume we’re near an even level
-
-      const result = runGoldenFormula(data, pattern, reversal, evenReaction);
-      const notes = [...result.notes];
-
-      let slope = 0;
-      if (result.direction === "call") slope = 0.7;
-      if (result.direction === "put")  slope = -0.7;
-      if (result.direction === "none") slope = 0.1;
-
-      if (directionStored !== "none" && directionStored !== result.direction) {
-        notes.push("Stored direction and fresh read do not fully agree, so the future path is drawn more gently.");
-        slope *= 0.6;
-      }
-
-      return { direction: result.direction, notes, slope };
-    }
-
-    // ----- chart drawing -----
-    function drawSimulator(data, analysis) {
-      const canvas = document.getElementById("chart");
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-
-      const viewMode = document.getElementById("viewMode").value;
-
-      const total = 40;
-      const nowIndex = 25;
-      const candles = [];
-      let base = data.price || 100;
-
-      // fake past candles around price
-      for (let i = 0; i < nowIndex; i++) {
-        const noise = (Math.random() - 0.5) * 0.8;
-        const close = base + noise - (nowIndex - i) * 0.05;
-        const open  = close + (Math.random() - 0.5) * 0.4;
-        const high  = Math.max(open, close) + Math.random() * 0.4;
-        const low   = Math.min(open, close) - Math.random() * 0.4;
-        candles.push({ open, high, low, close });
-      }
-
-      // NOW candle (uses real price/high/low if we have them)
-      candles.push({
-        open: data.price - 0.2,
-        high: data.dayHigh || data.price + 0.4,
-        low:  data.dayLow  || data.price - 0.4,
-        close: data.price
-      });
-
-      // future candles based on slope
-      let lastClose = data.price;
-      for (let i = nowIndex + 1; i < total; i++) {
-        const step = (i - nowIndex);
-        const trend = analysis.slope * (step / 4);
-        const noise = (Math.random() - 0.5) * 0.4;
-        const close = lastClose + trend + noise;
-        const open  = close + (Math.random() - 0.5) * 0.3;
-        const high  = Math.max(open, close) + Math.random() * 0.3;
-        const low   = Math.min(open, close) - Math.random() * 0.3;
-        candles.push({ open, high, low, close });
-        lastClose = close;
-      }
-
-      const prices = candles.flatMap(c => [c.high, c.low]);
-      const minP = Math.min.apply(null, prices);
-      const maxP = Math.max.apply(null, prices);
-      const pad = 20;
-      const w = canvas.width;
-      const h = canvas.height;
-      const cw = (w - pad*2) / total;
-
-      function y(v) {
-        return h - pad - ((v - minP) / (maxP - minP || 1)) * (h - pad*2);
-      }
-
-      ctx.fillStyle = "#050509";
-      ctx.fillRect(0,0,w,h);
-
-      // candles / line
-      if (viewMode === "real" || viewMode === "simple") {
-        candles.forEach((c, i) => {
-          const x = pad + i*cw + cw/2;
-          const up = c.close >= c.open;
-          const color = up ? "#3cff9d" : "#ff4c84";
-          ctx.strokeStyle = color;
-          ctx.fillStyle = color;
-
-          if (viewMode === "real") {
-            ctx.beginPath();
-            ctx.moveTo(x, y(c.high));
-            ctx.lineTo(x, y(c.low));
-            ctx.stroke();
-            const top = y(Math.max(c.open, c.close));
-            const bot = y(Math.min(c.open, c.close));
-            const bh = Math.max(2, bot - top);
-            ctx.fillRect(x - cw*0.3, top, cw*0.6, bh);
-          } else {
-            const mid = y(c.close);
-            ctx.fillRect(x - cw*0.35, mid - 6, cw*0.7, 12);
-          }
-        });
-      } else {
-        ctx.strokeStyle = "#3cff9d";
-        ctx.beginPath();
-        candles.forEach((c,i)=>{
-          const x = pad + i*cw + cw/2;
-          const yy = y(c.close);
-          if (i === 0) ctx.moveTo(x, yy);
-          else ctx.lineTo(x, yy);
-        });
-        ctx.stroke();
-      }
-
-      // simple MAs on simulated data (5 and 10 period)
-      const closes = candles.map(c => c.close);
-      function sma(idx, len) {
-        if (idx < len-1) return null;
-        let sum = 0;
-        for (let i = idx-len+1; i <= idx; i++) sum += closes[i];
-        return sum / len;
-      }
-
-      ctx.lineWidth = 1.5;
-
-      ctx.strokeStyle = "#ffcc00";
-      ctx.beginPath();
-      candles.forEach((c,i)=>{
-        const v = sma(i, 5);
-        if (v === null) return;
-        const x = pad + i*cw + cw/2;
-        const yy = y(v);
-        if (i === 5) ctx.moveTo(x, yy);
-        else ctx.lineTo(x, yy);
-      });
-      ctx.stroke();
-
-      ctx.strokeStyle = "#00b7ff";
-      ctx.beginPath();
-      candles.forEach((c,i)=>{
-        const v = sma(i, 10);
-        if (v === null) return;
-        const x = pad + i*cw + cw/2;
-        const yy = y(v);
-        if (i === 10) ctx.moveTo(x, yy);
-        else ctx.lineTo(x, yy);
-      });
-      ctx.stroke();
-
-      // NOW line
-      const nowX = pad + nowIndex*cw + cw/2;
-      ctx.strokeStyle = "#ffffff";
-      ctx.setLineDash([4,4]);
-      ctx.beginPath();
-      ctx.moveTo(nowX, pad);
-      ctx.lineTo(nowX, h - pad);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "11px Arial";
-      ctx.fillText("NOW", nowX - 12, pad + 10);
-    }
-
-    // ----- main run -----
-    function runSimulator() {
-      const pasteText = document.getElementById("pasteBox").value || "";
-
-      const basePrice   = parseFloat(localStorage.getItem("gf_price")   || "0");
-      const baseHigh    = parseFloat(localStorage.getItem("gf_dayHigh") || "0");
-      const baseLow     = parseFloat(localStorage.getItem("gf_dayLow")  || "0");
-      const baseFast    = parseFloat(localStorage.getItem("gf_maFast")  || "0");
-      const baseSlow    = parseFloat(localStorage.getItem("gf_maSlow")  || "0");
-      const base200     = parseFloat(localStorage.getItem("gf_ma200")   || "0");
-
-      let parsed = {};
-      if (pasteText.trim()) parsed = parseChartText(pasteText);
-
-      const data = {
-        price:   autoCorrectNumber(parsed.price   ?? basePrice, 1, 1000),
-        dayHigh: autoCorrectNumber(parsed.dayHigh ?? baseHigh,  1, 1000),
-        dayLow:  autoCorrectNumber(parsed.dayLow  ?? baseLow,   1, 1000),
-        maFast:  autoCorrectNumber(parsed.maFast  ?? baseFast,  1, 1000),
-        maSlow:  autoCorrectNumber(parsed.maSlow  ?? baseSlow,  1, 1000),
-        ma200:   autoCorrectNumber(parsed.ma200   ?? base200,   1, 1000)
-      };
-
-      const analysis = analyzeForSimulation(data);
-      drawSimulator(data, analysis);
-
-      document.getElementById("explanation").innerHTML = `
-        <h2>What the simulator sees</h2>
-        <ul>${analysis.notes.map(n => `<li>${n}</li>`).join("")}</ul>
-        <p class="note">
-          The future path is a smart guess based on moving averages, even numbers, and simple
-          “up / down / sideways” logic. It is for learning, not for promises.
-        </p>
-      `;
-    }
-
-    // ----- OCR hook -----
-    function attachOCR() {
-      const input = document.getElementById("imageInput");
-      const status = document.getElementById("ocrStatus");
-      const target = document.getElementById("pasteBox");
-
-      input.addEventListener("change", e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        status.textContent = "Reading image...";
-        Tesseract.recognize(file, 'eng').then(({ data }) => {
-          const text = data.text || "";
-          target.value = text;
-          status.textContent = "Image read. Text pasted automatically. Press 'Run Simulator'.";
-        }).catch(() => {
-          status.textContent = "Could not read image. Try a clearer screenshot.";
-        });
-      });
-    }
-
-    // ----- init -----
-    loadSetupBox();
-    attachOCR();
-    document.getElementById("runSimBtn").addEventListener("click", runSimulator);
-  </script>
+  <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+  <script type="module" src="core-logic.js"></script>
+  <script type="module" src="simulator.js"></script>
 </body>
 </html>
