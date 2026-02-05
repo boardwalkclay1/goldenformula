@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Golden Formula – Simple Setup Engine</title>
+<title>Golden Formula – Home</title>
+<script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 <style>
   body { font-family: Arial, sans-serif; background:#050509; color:#f5f5f5; padding:20px; max-width:900px; margin:0 auto; }
   h1 { color:#ff2b6a; }
@@ -20,47 +21,42 @@
 </head>
 <body>
 
-<h1>Golden Formula – Simple Setup Engine</h1>
+<h1>Golden Formula – Home</h1>
 <p class="note">
-  This page is for people who don’t know the market. It uses only moving averages, highs/lows, even numbers, and obvious patterns.
+  Upload a screenshot, paste text, or type numbers. The page will read the data, apply simple rules, and save everything for the Options and Simulator pages.
 </p>
 
 <div class="box">
-  <h2>1. Get the numbers</h2>
+  <h2>1. Screenshot (auto‑read)</h2>
+  <label>Upload chart or options screenshot</label>
+  <input type="file" id="imageInput" accept="image/*">
+  <p class="note" id="ocrStatus">No image loaded yet.</p>
+</div>
 
-  <label>How do you want to fill this?</label>
-  <select id="source">
-    <option value="manual">I will type them in</option>
-    <option value="paste">I will paste text from my app</option>
-  </select>
+<div class="box">
+  <h2>2. Paste or type numbers</h2>
 
-  <label>Paste data here (optional)
-    <span class="note">
-      Example:<br>
-      price: 13.69, high: 14.18, low: 13.37, ma20: 13.90, ma50: 13.64, ma200: 13.53
-    </span>
-  </label>
-  <textarea id="pasteBox"></textarea>
+  <label>Paste data (optional)</label>
+  <textarea id="pasteBox" placeholder="Example:
+price: 13.69, high: 14.18, low: 13.37, ma20: 13.90, ma50: 13.64, ma200: 13.53"></textarea>
 
-  <div id="manualBox">
-    <label>Current Price</label>
-    <input id="price" type="number" step="0.01">
+  <label>Current Price</label>
+  <input id="price" type="number" step="0.01">
 
-    <label>Day High</label>
-    <input id="dayHigh" type="number" step="0.01">
+  <label>Day High</label>
+  <input id="dayHigh" type="number" step="0.01">
 
-    <label>Day Low</label>
-    <input id="dayLow" type="number" step="0.01">
+  <label>Day Low</label>
+  <input id="dayLow" type="number" step="0.01">
 
-    <label>Fast Moving Average (20)</label>
-    <input id="maFast" type="number" step="0.01">
+  <label>Fast Moving Average (20)</label>
+  <input id="maFast" type="number" step="0.01">
 
-    <label>Slow Moving Average (50)</label>
-    <input id="maSlow" type="number" step="0.01">
+  <label>Slow Moving Average (50)</label>
+  <input id="maSlow" type="number" step="0.01">
 
-    <label>Long Moving Average (200)</label>
-    <input id="ma200" type="number" step="0.01">
-  </div>
+  <label>Long Moving Average (200)</label>
+  <input id="ma200" type="number" step="0.01">
 
   <label>Timeframe</label>
   <select id="timeframe">
@@ -73,34 +69,27 @@
 </div>
 
 <div class="box">
-  <h2>2. Pattern and reversal</h2>
+  <h2>3. Pattern and reversal</h2>
 
-  <label>What pattern do you see?</label>
+  <label>Pattern</label>
   <select id="pattern">
     <option value="none">Nothing clear</option>
-    <option value="doubleBottom">Double Bottom (two bottoms at same area)</option>
-    <option value="roundingBottom">Rounding Bottom (U‑shape)</option>
-    <option value="doubleTop">Double Top (two tops at same area)</option>
-    <option value="roundingTop">Rounding Top (upside‑down U)</option>
+    <option value="doubleBottom">Double Bottom</option>
+    <option value="roundingBottom">Rounding Bottom</option>
+    <option value="doubleTop">Double Top</option>
+    <option value="roundingTop">Rounding Top</option>
   </select>
 
-  <p class="note">
-    Double Bottom: price drops, bounces, drops again to almost the same low, then bounces hard.<br>
-    Rounding Bottom: price slowly curves like a “U” and then starts rising.<br>
-    Double Top: price rises, falls, rises again to almost the same high, then falls hard.<br>
-    Rounding Top: price slowly curves like an upside‑down “U” and then starts falling.
-  </p>
-
-  <label>Did you see a strong reversal candle at the turning point?</label>
+  <label>Strong reversal candle at turning point?</label>
   <select id="reversal">
     <option value="no">No</option>
-    <option value="yes">Yes, very clear</option>
+    <option value="yes">Yes</option>
   </select>
 
-  <label>Did this happen at a clean even number? (100, 105, 110, 150, etc.)</label>
+  <label>Reaction at clean even number? (100, 105, 110, etc.)</label>
   <select id="evenReaction">
     <option value="no">No</option>
-    <option value="yes">Yes, price clearly reacted there</option>
+    <option value="yes">Yes</option>
   </select>
 </div>
 
@@ -109,105 +98,102 @@
 <div id="output" class="result"></div>
 
 <div class="box">
+  <button onclick="downloadSnapshot()">Download Setup Snapshot</button>
   <button onclick="window.location.href='options.html'">Go to Options Page →</button>
   <button onclick="window.location.href='simulator.html'">Go to Simulator →</button>
 </div>
 
 <script>
-function parsePasted(text) {
+function autoCorrectNumber(raw, hintMin, hintMax) {
+  if (raw == null || isNaN(raw)) return null;
+  let v = raw;
+  if (v > 1000 && hintMax && hintMax < 100) v = v / 100; // 1330 -> 13.30 style
+  if (hintMin != null && v < hintMin * 0.1) v = v * 0.1;
+  if (hintMax != null && v > hintMax * 10) v = v * 0.1;
+  return v;
+}
+
+function parseLooseText(text) {
   const out = {};
-  const pairs = text.split(/[,;\n]/);
-  pairs.forEach(p => {
-    const parts = p.split(':');
-    if (parts.length === 2) {
-      const key = parts[0].trim().toLowerCase();
-      const val = parseFloat(parts[1].trim());
-      if (!isNaN(val)) {
-        if (key.includes("price")) out.price = val;
-        if (key.includes("high")) out.dayHigh = val;
-        if (key.includes("low")) out.dayLow = val;
-        if (key.includes("fast")) out.maFast = val;
-        if (key.includes("slow")) out.maSlow = val;
-        if (key.includes("200")) out.ma200 = val;
-        if (key === "ma20") out.maFast = val;
-        if (key === "ma50") out.maSlow = val;
-      }
+  const tokens = text.replace(/\n/g, ' ').split(/[\s,]+/);
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i].toLowerCase();
+    const next = parseFloat(tokens[i+1]);
+    if (t.includes("ma20") || t === "ma20:") out.maFast = next;
+    if (t.includes("ma50") || t === "ma50:") out.maSlow = next;
+    if (t.includes("ma200") || t === "ma200:") out.ma200 = next;
+    if (t === "h/l" || t === "h/l:") {
+      const hi = parseFloat(tokens[i+1]);
+      const lo = parseFloat(tokens[i+3]);
+      if (!isNaN(hi)) out.dayHigh = hi;
+      if (!isNaN(lo)) out.dayLow = lo;
     }
-  });
+  }
+
+  const nums = tokens.map(x => parseFloat(x)).filter(x => !isNaN(x));
+  if (nums.length) {
+    const sorted = [...nums].sort((a,b)=>a-b);
+    const min = sorted[0], max = sorted[sorted.length-1];
+    const mid = sorted[Math.floor(sorted.length/2)];
+    out.price = mid;
+    if (!out.dayHigh || !out.dayLow) {
+      out.dayLow = min;
+      out.dayHigh = max;
+    }
+  }
   return out;
 }
 
-function nearestEven(price) {
-  return Math.round(price / 5) * 5;
-}
-function nextEvenUp(price) {
-  return Math.ceil(price / 5) * 5;
-}
-function nextEvenDown(price) {
-  return Math.floor(price / 5) * 5;
-}
+function nearestEven(price) { return Math.round(price / 5) * 5; }
+function nextEvenUp(price) { return Math.ceil(price / 5) * 5; }
+function nextEvenDown(price) { return Math.floor(price / 5) * 5; }
 
 function runFormula() {
-  const source = document.getElementById("source").value;
-  let data = {};
+  let text = document.getElementById("pasteBox").value || "";
+  let parsed = text ? parseLooseText(text) : {};
 
-  if (source === "paste") {
-    data = parsePasted(document.getElementById("pasteBox").value);
-  }
-
-  if (source === "manual" || !data.price) {
-    data.price = parseFloat(document.getElementById("price").value);
-    data.dayHigh = parseFloat(document.getElementById("dayHigh").value);
-    data.dayLow = parseFloat(document.getElementById("dayLow").value);
-    data.maFast = parseFloat(document.getElementById("maFast").value);
-    data.maSlow = parseFloat(document.getElementById("maSlow").value);
-    data.ma200 = parseFloat(document.getElementById("ma200").value);
-  }
+  let price = autoCorrectNumber(parsed.price ?? parseFloat(document.getElementById("price").value), 1, 1000);
+  let dayHigh = autoCorrectNumber(parsed.dayHigh ?? parseFloat(document.getElementById("dayHigh").value), 1, 1000);
+  let dayLow = autoCorrectNumber(parsed.dayLow ?? parseFloat(document.getElementById("dayLow").value), 1, 1000);
+  let maFast = autoCorrectNumber(parsed.maFast ?? parseFloat(document.getElementById("maFast").value), 1, 1000);
+  let maSlow = autoCorrectNumber(parsed.maSlow ?? parseFloat(document.getElementById("maSlow").value), 1, 1000);
+  let ma200 = autoCorrectNumber(parsed.ma200 ?? parseFloat(document.getElementById("ma200").value), 1, 1000);
 
   const timeframe = document.getElementById("timeframe").value;
   const pattern = document.getElementById("pattern").value;
   const reversal = document.getElementById("reversal").value;
   const evenReaction = document.getElementById("evenReaction").value;
 
-  if ([data.price, data.maFast, data.maSlow].some(v => isNaN(v))) {
-    document.getElementById("output").innerHTML = "<p>Please fill or paste price and both moving averages.</p>";
+  if ([price, maFast, maSlow].some(v => v == null || isNaN(v))) {
+    document.getElementById("output").innerHTML = "<p>Please make sure price and both moving averages are readable.</p>";
     return;
   }
 
   let direction = "none";
   const reasons = [];
 
-  if (data.maFast > data.maSlow && data.price > data.maFast) {
+  if (maFast > maSlow && price > maFast) {
     direction = "call";
     reasons.push("Fast moving average is above slow and price is above both → up move.");
-  } else if (data.maFast < data.maSlow && data.price < data.maFast) {
+  } else if (maFast < maSlow && price < maFast) {
     direction = "put";
     reasons.push("Fast moving average is below slow and price is below both → down move.");
   } else {
-    direction = "none";
     reasons.push("Moving averages do not clearly show up or down.");
   }
 
-  if (!isNaN(data.ma200)) {
-    if (data.maFast > data.maSlow && data.maFast > data.ma200) {
-      reasons.push("Fast is above slow and long → golden cross style uptrend.");
-    } else if (data.maFast < data.maSlow && data.maFast < data.ma200) {
-      reasons.push("Fast is below slow and long → death cross style downtrend.");
-    }
-  }
-  const diff = Math.abs(data.maFast - data.maSlow);
-  if (diff <= data.price * 0.005) {
-    reasons.push("Fast and slow moving averages are very close → a cross may be coming.");
-  }
+  if (maFast > maSlow && maFast > ma200) reasons.push("Fast is above slow and long → golden cross style uptrend.");
+  if (maFast < maSlow && maFast < ma200) reasons.push("Fast is below slow and long → death cross style downtrend.");
+  const diff = Math.abs(maFast - maSlow);
+  if (diff <= price * 0.005) reasons.push("Fast and slow moving averages are very close → a cross may be coming.");
 
   let patternOk = false;
   if (direction === "call" && (pattern === "doubleBottom" || pattern === "roundingBottom")) {
-    patternOk = true;
-    reasons.push("You marked an obvious bottom pattern.");
+    patternOk = true; reasons.push("You marked an obvious bottom pattern.");
   }
   if (direction === "put" && (pattern === "doubleTop" || pattern === "roundingTop")) {
-    patternOk = true;
-    reasons.push("You marked an obvious top pattern.");
+    patternOk = true; reasons.push("You marked an obvious top pattern.");
   }
   if (!patternOk) reasons.push("Pattern does not clearly match the direction.");
 
@@ -215,16 +201,16 @@ function runFormula() {
   else reasons.push("No strong reversal candle confirmed.");
 
   if (evenReaction === "yes") {
-    const level = nearestEven(data.price);
+    const level = nearestEven(price);
     reasons.push("Price reacted at a clean even number around " + level + ".");
   } else {
     reasons.push("No clear reaction at an even number.");
   }
 
-  if (!isNaN(data.dayHigh) && !isNaN(data.dayLow)) {
-    const range = data.dayHigh - data.dayLow;
+  if (!isNaN(dayHigh) && !isNaN(dayLow)) {
+    const range = dayHigh - dayLow;
     if (range > 0) {
-      const pos = (data.price - data.dayLow) / range;
+      const pos = (price - dayLow) / range;
       if (pos < 0.2) reasons.push("Price is near the low of the day → could be a bottom area.");
       else if (pos > 0.8) reasons.push("Price is near the high of the day → could be a top area.");
     }
@@ -237,12 +223,12 @@ function runFormula() {
 
   if (valid) {
     if (direction === "call") {
-      entry = nextEvenUp(data.price);
+      entry = nextEvenUp(price);
       stop = (entry * 0.8).toFixed(2);
       reasons.push("CALL idea. Enter at the next even number above: " + entry + ".");
       reasons.push("Stop loss is 20% below entry: " + stop + ".");
     } else {
-      entry = nextEvenDown(data.price);
+      entry = nextEvenDown(price);
       stop = (entry * 1.2).toFixed(2);
       reasons.push("PUT idea. Enter at the next even number below: " + entry + ".");
       reasons.push("Stop loss is 20% above entry: " + stop + ".");
@@ -252,48 +238,64 @@ function runFormula() {
   if (!valid) {
     document.getElementById("output").innerHTML = `
       <h2>No Trade – Not Simple Enough</h2>
-      <p>We only want very clear, simple setups. This one does not pass all checks.</p>
-      <h3>Why:</h3>
       <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
     `;
-    localStorage.setItem("gf_direction", "none");
-    localStorage.setItem("gf_entry", "");
-    localStorage.setItem("gf_stop", "");
-    localStorage.setItem("gf_price", data.price || "");
-    localStorage.setItem("gf_maFast", data.maFast || "");
-    localStorage.setItem("gf_maSlow", data.maSlow || "");
-    localStorage.setItem("gf_ma200", data.ma200 || "");
-    localStorage.setItem("gf_dayHigh", data.dayHigh || "");
-    localStorage.setItem("gf_dayLow", data.dayLow || "");
-    localStorage.setItem("gf_timeframe", timeframe);
-    return;
+    direction = "none"; entry = ""; stop = "";
+  } else {
+    document.getElementById("output").innerHTML = `
+      <h2>Trade Idea Found</h2>
+      <p><strong>Type:</strong> ${direction === "call" ? "CALL (bet on up)" : "PUT (bet on down)"}</p>
+      <p><strong>Entry:</strong> ${entry}</p>
+      <p><strong>Stop (20%):</strong> ${stop}</p>
+      <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+    `;
   }
-
-  document.getElementById("output").innerHTML = `
-    <h2>Trade Idea Found</h2>
-    <p><strong>Type:</strong> ${direction === "call" ? "CALL (bet on up)" : "PUT (bet on down)"}</p>
-    <p><strong>Suggested Entry:</strong> ${entry}</p>
-    <p><strong>Stop Loss (20%):</strong> ${stop}</p>
-    <h3>Why this setup:</h3>
-    <ul>${reasons.map(r => `<li>${r}</li>`).join("")}</ul>
-    <p class="note">Options page and simulator will use this same logic.</p>
-  `;
 
   localStorage.setItem("gf_direction", direction);
   localStorage.setItem("gf_entry", entry);
   localStorage.setItem("gf_stop", stop);
-  localStorage.setItem("gf_price", data.price || "");
-  localStorage.setItem("gf_maFast", data.maFast || "");
-  localStorage.setItem("gf_maSlow", data.maSlow || "");
-  localStorage.setItem("gf_ma200", data.ma200 || "");
-  localStorage.setItem("gf_dayHigh", data.dayHigh || "");
-  localStorage.setItem("gf_dayLow", data.dayLow || "");
+  localStorage.setItem("gf_price", price || "");
+  localStorage.setItem("gf_maFast", maFast || "");
+  localStorage.setItem("gf_maSlow", maSlow || "");
+  localStorage.setItem("gf_ma200", ma200 || "");
+  localStorage.setItem("gf_dayHigh", dayHigh || "");
+  localStorage.setItem("gf_dayLow", dayLow || "");
   localStorage.setItem("gf_timeframe", timeframe);
 }
 
-document.getElementById("source").addEventListener("change", function() {
-  document.getElementById("manualBox").style.display =
-    this.value === "manual" ? "block" : "none";
+function downloadSnapshot() {
+  const data = {
+    direction: localStorage.getItem("gf_direction"),
+    entry: localStorage.getItem("gf_entry"),
+    stop: localStorage.getItem("gf_stop"),
+    price: localStorage.getItem("gf_price"),
+    maFast: localStorage.getItem("gf_maFast"),
+    maSlow: localStorage.getItem("gf_maSlow"),
+    ma200: localStorage.getItem("gf_ma200"),
+    dayHigh: localStorage.getItem("gf_dayHigh"),
+    dayLow: localStorage.getItem("gf_dayLow"),
+    timeframe: localStorage.getItem("gf_timeframe")
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "golden_formula_snapshot.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById("imageInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById("ocrStatus").textContent = "Reading image...";
+  Tesseract.recognize(file, 'eng').then(({ data }) => {
+    const text = data.text || "";
+    document.getElementById("pasteBox").value = text;
+    document.getElementById("ocrStatus").textContent = "Image read. Text pasted automatically. You can press 'Find Setup'.";
+  }).catch(() => {
+    document.getElementById("ocrStatus").textContent = "Could not read image. Try a clearer screenshot.";
+  });
 });
 </script>
 
