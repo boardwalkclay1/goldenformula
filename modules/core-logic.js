@@ -2,33 +2,37 @@
 // Golden Simulator — Full Intelligence Pipeline Orchestrator
 
 // ------------------------------
-// IMPORT ANALYSIS MODULES
+// INPUT MODULES
 // ------------------------------
-import { detectPriceAxis } from "./modules/axisDetector.js";
-import { extractCandles } from "./modules/candleExtractor.js";
-import { parseTimeAxis } from "./modules/timeAxisParser.js";
-import { analyzeTrend } from "./modules/trendModel.js";
-import { analyzeVolatility } from "./modules/volatilityModel.js";
-import { analyzeLiquidity } from "./modules/liquidityModel.js";
-import { analyzePatterns } from "./modules/patternModel.js";
+import { detectPriceAxis } from "./modules/input/axisDetector.js";
+import { extractCandles } from "./modules/input/candleExtractor.js";
+import { parseTimeAxis } from "./modules/input/timeParser.js";
 
 // ------------------------------
-// IMPORT GOLDEN FORMULA MODULES
+// ANALYSIS MODULES
 // ------------------------------
-import { evaluateGFRules } from "./golden/gfRules.js";
-import { scoreGoldenFormula } from "./golden/gfScoring.js";
-import { buildGFNarrative } from "./golden/gfNarrative.js";
+import { analyzeTrend } from "./modules/analysis/trendModel.js";
+import { analyzeVolatility } from "./modules/analysis/volatilityModel.js";
+import { analyzeLiquidity } from "./modules/analysis/liquidityModel.js";
+import { analyzePatterns } from "./modules/analysis/patternModel.js";
 
 // ------------------------------
-// IMPORT RENDERING MODULES
+// GOLDEN FORMULA MODULES
 // ------------------------------
-import { renderGoldChart } from "./render/goldChart.js";
+import { evaluateGFRules } from "./modules/golden/gfRules.js";
+import { scoreGoldenFormula } from "./modules/golden/gfScoring.js";
+import { buildGFNarrative } from "./modules/golden/gfNarrative.js";
 
 // ------------------------------
-// IMPORT UTILITY MODULES
+// RENDERING MODULES
 // ------------------------------
-import { nearestEven, nextEvenUp, nextEvenDown } from "./modules/helpers.js";
-import { parseChainLoose, pickBestContract } from "./modules/options.js";
+import { renderGoldChart } from "./modules/render/goldChart.js";
+
+// ------------------------------
+// UTILITIES (ROOT LEVEL)
+// ------------------------------
+import { nearestEven, nextEvenUp, nextEvenDown } from "./helpers.js";
+import { parseChainLoose, pickBestContract } from "./options.js";
 
 // ------------------------------
 // MAIN PIPELINE FUNCTION
@@ -85,9 +89,6 @@ export async function runGoldenPipeline(canvas, log = () => {}) {
   log("Rendering cinematic chart...");
   renderGoldChart(canvas, candleData.candles, axis, liquidity, scoring, patterns);
 
-  // ------------------------------
-  // RETURN FULL INTELLIGENCE PACKAGE
-  // ------------------------------
   return {
     axis,
     candles: candleData.candles,
@@ -100,7 +101,6 @@ export async function runGoldenPipeline(canvas, log = () => {}) {
     scoring,
     narrative,
 
-    // expose helpers + options engine
     nearestEven,
     nextEvenUp,
     nextEvenDown,
