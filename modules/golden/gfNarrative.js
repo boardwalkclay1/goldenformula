@@ -1,93 +1,104 @@
-// /golden/gfNarrative.js
-// Golden Formula Narrative Engine
-// Consumes: scoring, rules, trend, volatility, liquidity, patterns
-// Produces: a cinematic, structured narrative string
+// /modules/golden/gfNarrative.js
+// Beginner‑friendly Golden Formula narrative
 
-export function buildGFNarrative({ scoring, rules, trend, volatility, liquidity, patterns }) {
-  const { gfScore, direction, entry, stop, target, rr } = scoring;
+export function buildGFNarrative({ scoring, rules, trend, volatility, liquidity, patterns, candleSpacing }) {
+  const lines = [];
 
+  // ------------------------------
+  // SIMPLE HEADER
+  // ------------------------------
+  lines.push(`Golden Formula Score: ${scoring.gfScore}`);
+  lines.push(`Direction: ${scoring.direction === "long" ? "Buy (Call)" : scoring.direction === "short" ? "Sell (Put)" : "No clear direction"}`);
+  lines.push("");
+
+  // ------------------------------
+  // ENTRY + EXIT (BEGINNER FRIENDLY)
+  // ------------------------------
+  if (scoring.direction !== "none") {
+    lines.push("Trade Plan (Simple):");
+
+    lines.push(`• Entry price: ${scoring.entry}`);
+    lines.push(`• Stop loss: ${scoring.stop}`);
+    lines.push(`• Target: ${scoring.target}`);
+
+    const candles = scoring.expectedCandles || 3;
+    const minutes = candleSpacing ? Math.round(candleSpacing * candles) : null;
+
+    if (minutes) {
+      lines.push(`• Expected move: next ${candles} candles (~${minutes} minutes)`);
+    } else {
+      lines.push(`• Expected move: next few candles`);
+    }
+
+    lines.push("");
+  }
+
+  // ------------------------------
+  // TREND (BEGINNER FRIENDLY)
+  // ------------------------------
+  lines.push("Trend:");
+  if (trend.direction === "up") lines.push("• Price has mostly been moving up.");
+  else if (trend.direction === "down") lines.push("• Price has mostly been moving down.");
+  else lines.push("• Price is moving sideways, not a strong trend.");
+  lines.push("");
+
+  // ------------------------------
+  // VOLATILITY (BEGINNER FRIENDLY)
+  // ------------------------------
+  lines.push("Volatility:");
+  if (volatility.regime === "low") lines.push("• Price is moving calmly. Moves may be slower.");
+  else if (volatility.regime === "medium") lines.push("• Price is moving at a normal speed.");
+  else lines.push("• Price is jumping around a lot. Moves may be fast.");
+  lines.push("");
+
+  // ------------------------------
+  // LIQUIDITY (BEGINNER FRIENDLY)
+  // ------------------------------
+  lines.push("Liquidity Zones:");
+  if (liquidity.equalHighs.length > 0) lines.push("• There are equal highs above. Price may move up to grab them.");
+  if (liquidity.equalLows.length > 0) lines.push("• There are equal lows below. Price may move down to grab them.");
+  if (liquidity.fvgs.length > 0) lines.push("• There are gaps in price (FVGs). Price often fills these.");
+  if (liquidity.equalHighs.length === 0 && liquidity.equalLows.length === 0 && liquidity.fvgs.length === 0)
+    lines.push("• No major liquidity areas detected.");
+  lines.push("");
+
+  // ------------------------------
+  // PATTERNS (BEGINNER FRIENDLY)
+  // ------------------------------
+  lines.push("Patterns:");
+  if (patterns.flag.active) lines.push("• A flag pattern is forming. This usually means price may continue in the same direction.");
+  if (patterns.breakout.active) lines.push("• Price broke above/below a recent level. This can start a new move.");
+  if (patterns.reversal.active) lines.push(`• A reversal candle appeared (${patterns.reversal.type}).`);
+  if (patterns.compression.active) lines.push("• Price is getting tight. A bigger move may come soon.");
+  if (!patterns.flag.active && !patterns.breakout.active && !patterns.reversal.active && !patterns.compression.active)
+    lines.push("• No strong patterns detected.");
+  lines.push("");
+
+  // ------------------------------
+  // RULES PASSED / FAILED (BEGINNER FRIENDLY)
+  // ------------------------------
   const passed = rules.filter(r => r.passed);
   const failed = rules.filter(r => !r.passed);
 
-  const header = [
-    `Golden Formula Score: ${gfScore}`,
-    `Direction: ${direction.toUpperCase()}`,
-  ].join("\n");
+  lines.push("What the chart is doing well:");
+  if (passed.length === 0) lines.push("• Nothing strong here.");
+  passed.forEach(r => lines.push(`• ${r.detail}`));
+  lines.push("");
 
-  const context = [
-    `Trend: ${trend.direction} (confidence ${trend.confidence})`,
-    `Volatility: ${volatility.regime} (confidence ${volatility.confidence})`,
-    `Liquidity Strength: ${liquidity.confidence}`,
-    `Pattern Confidence: ${patterns.confidence}`,
-  ].join("\n");
+  lines.push("What the chart is NOT doing well:");
+  if (failed.length === 0) lines.push("• Nothing major is wrong.");
+  failed.forEach(r => lines.push(`• ${r.detail}`));
+  lines.push("");
 
-  const levels = direction === "none"
-    ? "No trade levels — market conditions unclear."
-    : [
-        `Entry: ${entry.toFixed(4)}`,
-        `Stop: ${stop.toFixed(4)}`,
-        `Target: ${target.toFixed(4)}`,
-        `Risk‑to‑Reward: ${rr.toFixed(2)}R`,
-      ].join("\n");
+  // ------------------------------
+  // SIMPLE INTERPRETATION
+  // ------------------------------
+  lines.push("Simple Summary:");
+  if (scoring.gfScore >= 80) lines.push("• This is a strong setup. The chart supports the move clearly.");
+  else if (scoring.gfScore >= 60) lines.push("• This setup is decent. It could work, but watch price closely.");
+  else if (scoring.gfScore >= 40) lines.push("• This setup is weak. Be careful.");
+  else lines.push("• This setup is not good. Avoid trading it.");
+  lines.push("");
 
-  const passedList = passed.length
-    ? passed.map(r => `✓ ${r.name} — ${r.detail}`).join("\n")
-    : "None";
-
-  const failedList = failed.length
-    ? failed.map(r => `✗ ${r.name} — ${r.detail}`).join("\n")
-    : "None";
-
-  const interpretation = interpretGFScore(gfScore, direction, patterns);
-
-  return [
-    header,
-    "",
-    "Market Context:",
-    context,
-    "",
-    "Trade Levels:",
-    levels,
-    "",
-    "Passed Rules:",
-    passedList,
-    "",
-    "Failed Rules:",
-    failedList,
-    "",
-    "Interpretation:",
-    interpretation,
-  ].join("\n");
-}
-
-function interpretGFScore(score, direction, patterns) {
-  if (direction === "none") {
-    return "Market structure is unclear or sideways. No directional edge present.";
-  }
-
-  if (patterns.breakout?.active) {
-    return "Breakout structure detected — momentum favors continuation if volatility supports it.";
-  }
-
-  if (patterns.compression?.active) {
-    return "Compression detected — expect expansion soon. Watch for breakout confirmation.";
-  }
-
-  if (patterns.reversal?.active) {
-    return `Reversal structure forming (${patterns.reversal.type}). Trend may be shifting.`;
-  }
-
-  if (score >= 85) {
-    return "High‑probability alignment across trend, volatility, liquidity, and structure.";
-  }
-
-  if (score >= 70) {
-    return "Strong setup with solid alignment. Manage risk but conditions are favorable.";
-  }
-
-  if (score >= 55) {
-    return "Moderate setup. Some conditions missing. Consider waiting for confirmation.";
-  }
-
-  return "Weak alignment. Avoid unless additional structure appears.";
+  return lines.join("\n");
 }
