@@ -22,6 +22,7 @@ import { analyzePatterns } from "./modules/analysis/patternModel.js";
 import { evaluateGFRules } from "./modules/golden/gfRules.js";
 import { scoreGoldenFormula } from "./modules/golden/gfScoring.js";
 import { buildGFNarrative } from "./modules/golden/gfNarrative.js";
+import { buildGFTiming } from "./modules/golden/gfTiming.js";
 
 // ------------------------------
 // RENDERING MODULES
@@ -86,6 +87,15 @@ export async function runGoldenPipeline(canvas, log = () => {}) {
     patterns,
   });
 
+  log("Building timing guidance...");
+  const timing = buildGFTiming({
+    scoring,
+    trend,
+    volatility,
+    patterns,
+    candleSpacing: time.spacing,
+  });
+
   log("Rendering cinematic chart...");
   renderGoldChart(canvas, candleData.candles, axis, liquidity, scoring, patterns);
 
@@ -100,6 +110,7 @@ export async function runGoldenPipeline(canvas, log = () => {}) {
     rules,
     scoring,
     narrative,
+    timing,
 
     nearestEven,
     nextEvenUp,
