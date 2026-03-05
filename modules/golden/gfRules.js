@@ -1,124 +1,62 @@
 // gfRules.js
-// Golden Formula Tier 1 Core Rules
-// Input: trend, volatility, liquidity, candles
-// Output: rule-by-rule evaluation for GF scoring engine
+// Golden Formula — Decision Rules Engine
 
-export function evaluateGFRules({ trend, volatility, liquidity, candles }) {
+export function evaluateRules(candles, trend, pattern, liquidity, timing) {
   const last = candles[candles.length - 1];
 
-  const rules = [];
+  // Trendline highs and lows (last 20 candles)
+  const highs = candles.slice(-20).map(c => c.high);
+  const lows = candles.slice(-20).map(c => c.low);
 
-  // ---------------------------
-  // Rule 1: Trend Alignment
-  // ---------------------------
-  const trendRule = trend.direction !== "sideways" && trend.confidence >= 40;
-  rules.push({
-    name: "Trend Alignment",
-    passed: trendRule,
-    weight: 0.25,
-    detail: `Trend: ${trend.direction}, confidence ${trend.confidence}`,
-  });
+  const trendlineHigh = linearTrend(highs);
+  const trendlineLow = linearTrend(lows);
 
-  // ---------------------------
-  // Rule 2: Volatility Regime
-  // ---------------------------
-  const volRule = volatility.regime !== "low-volatility";
-  rules.push({
-    name: "Volatility Regime",
-    passed: volRule,
-    weight: 0.15,
-    detail: `Regime: ${volatility.regime}, confidence ${volatility.confidence}`,
-  });
+  const breakoutUp = last.close > trendlineHigh;
+  const breakoutDown = last.close < trendlineLow;
 
-  // ---------------------------
-  // Rule 3: Liquidity Context
-  // ---------------------------
-  const liqRule = liquidity.confidence >= 30;
-  rules.push({
-    name: "Liquidity Context",
-    passed: liqRule,
-    weight: 0.20,
-    detail: `Liquidity confidence: ${liquidity.confidence}`,
-  });
+  // Target = next integer level
+  const target =
+    liquidity.nearest10 > last.close
+      ? liquidity.nearest10
+      : liquidity.nearest10 + 10;
 
-  // ---------------------------
-  // Rule 4: Candle Structure
-  // ---------------------------
-  const body = Math.abs(last.open - last.close);
-  const range = last.high - last.low;
-  const bodyRatio = body / range;
+  // Stop = 20% below entry
+  const stop = last.close * 0.80;
 
-  const candleRule = bodyRatio >= 0.35;
-  rules.push({
-    name: "Candle Structure",
-    passed: candleRule,
-    weight: 0.15,
-    detail: `Body ratio: ${bodyRatio.toFixed(2)}`,
-  });
+  const direction =
+    breakoutUp ? "long" :
+    breakoutDown ? "short" :
+    trend.trendBias.includes("up") ? "long" :
+    trend.trendBias.includes("down") ? "short" :
+    "neutral";
 
-  // ---------------------------
-  // Rule 5: Breakout / Pullback Logic
-  // ---------------------------
-  const breakoutRule = detectBreakout(candles, trend.direction);
-  rules.push({
-    name: "Breakout / Pullback Logic",
-    passed: breakoutRule,
-    weight: 0.15,
-    detail: breakoutRule ? "Breakout confirmed" : "No breakout",
-  });
-
-  // ---------------------------
-  // Rule 6: Invalidation Logic
-  // ---------------------------
-  const invalidationRule = detectInvalidation(candles, trend.direction);
-  rules.push({
-    name: "Invalidation Check",
-    passed: invalidationRule,
-    weight: 0.10,
-    detail: invalidationRule ? "No invalidation" : "Invalidation detected",
-  });
-
-  return rules;
+  return {
+    breakoutUp,
+    breakoutDown,
+    trendlineHigh,
+    trendlineLow,
+    entry: last.close,
+    stop,
+    target,
+    direction
+  };
 }
 
-// ---------------------------
-// Breakout Detection
-// ---------------------------
+function linearTrend(series) {
+  const n = series.length;
+  const xMean = (n - 1) / 2;
+  const yMean = series.reduce((a, b) => a + b, 0) / n;
 
-function detectBreakout(candles, direction) {
-  if (candles.length < 4) return false;
+  let num = 0;
+  let den = 0;
 
-  const last = candles[candles.length - 1];
-  const prev = candles[candles.length - 2];
-
-  if (direction === "up") {
-    return last.close > prev.high;
+  for (let i = 0; i < n; i++) {
+    num += (i - xMean) * (series[i] - yMean);
+    den += (i - xMean) ** 2;
   }
 
-  if (direction === "down") {
-    return last.close < prev.low;
-  }
+  const slope = num / den;
+  const intercept = yMean - slope * xMean;
 
-  return false;
-}
-
-// ---------------------------
-// Invalidation Detection
-// ---------------------------
-
-function detectInvalidation(candles, direction) {
-  if (candles.length < 4) return true;
-
-  const last = candles[candles.length - 1];
-  const prev = candles[candles.length - 2];
-
-  if (direction === "up") {
-    return last.low > prev.low;
-  }
-
-  if (direction === "down") {
-    return last.high < prev.high;
-  }
-
-  return true;
+  return slope * (n - 1) + intercept;
 }
