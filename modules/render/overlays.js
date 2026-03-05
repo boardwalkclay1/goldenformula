@@ -1,48 +1,73 @@
-// /render/overlays.js
-// Draws liquidity zones, equal highs/lows, FVGs, GF levels
+// overlays.js
+// Golden Simulator — Entry/Stop/Target + Shadow Projection Overlays
 
-export function drawOverlays(ctx, axis, liquidity, gf) {
+export function drawOverlays(ctx, axis, liquidity, scoring, patterns) {
   const { priceToPixel } = axis;
-  const w = ctx.canvas.width;
+  const entry = scoring.entry ?? scoring.rules?.entry;
+  const stop = scoring.stop ?? scoring.rules?.stop;
+  const target = scoring.target ?? scoring.rules?.target;
 
-  // Equal highs/lows
-  for (const eq of liquidity.equalLevels) {
-    const y = priceToPixel.a * eq.price + priceToPixel.b;
-    ctx.strokeStyle = "rgba(255,215,0,0.35)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
+  if (!entry || !stop || !target) return;
 
-  // FVGs
-  for (const fvg of liquidity.fvgs) {
-    const top = priceToPixel.a * fvg.gapTop + priceToPixel.b;
-    const bottom = priceToPixel.a * fvg.gapBottom + priceToPixel.b;
+  // ------------------------------
+  // LINE COLORS
+  // ------------------------------
+  const gold = "#ffd700";
+  const green = "#00ff99";
+  const red = "#ff4d4d";
 
-    ctx.fillStyle =
-      fvg.type === "bullish"
-        ? "rgba(0,255,0,0.12)"
-        : "rgba(255,0,0,0.12)";
+  // ------------------------------
+  // ENTRY LINE
+  // ------------------------------
+  drawHLine(ctx, priceToPixel(entry), gold, 2);
+  drawLabel(ctx, "ENTRY", priceToPixel(entry), gold);
 
-    ctx.fillRect(0, top, w, bottom - top);
-  }
+  // ------------------------------
+  // STOP LOSS LINE
+  // ------------------------------
+  drawHLine(ctx, priceToPixel(stop), red, 2);
+  drawLabel(ctx, "STOP LOSS", priceToPixel(stop), red);
 
-  // GF Levels
-  if (gf.direction !== "none") {
-    drawLevel(ctx, priceToPixel, gf.entry, "#ffd700", 2);
-    drawLevel(ctx, priceToPixel, gf.stop, "#ff4d4d", 2);
-    drawLevel(ctx, priceToPixel, gf.target, "#00ff99", 2);
-  }
+  // ------------------------------
+  // TARGET LINE
+  // ------------------------------
+  drawHLine(ctx, priceToPixel(target), green, 2);
+  drawLabel(ctx, "TARGET", priceToPixel(target), green);
+
+  // ------------------------------
+  // SHADOW PROJECTION
+  // ------------------------------
+  drawShadow(ctx, axis, entry, target, stop);
 }
 
-function drawLevel(ctx, priceToPixel, price, color, width) {
-  const y = priceToPixel.a * price + priceToPixel.b;
+function drawHLine(ctx, y, color, width = 1) {
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.beginPath();
   ctx.moveTo(0, y);
   ctx.lineTo(ctx.canvas.width, y);
   ctx.stroke();
+}
+
+function drawLabel(ctx, text, y, color) {
+  ctx.fillStyle = color;
+  ctx.font = "14px Inter, sans-serif";
+  ctx.fillText(text, 10, y - 6);
+}
+
+function drawShadow(ctx, axis, entry, target, stop) {
+  const { priceToPixel } = axis;
+
+  const entryY = priceToPixel(entry);
+  const targetY = priceToPixel(target);
+  const stopY = priceToPixel(stop);
+
+  const isLong = target > entry;
+
+  const shadowColor = isLong ? "rgba(0,255,150,0.15)" : "rgba(255,80,80,0.15)";
+  const y1 = isLong ? targetY : entryY;
+  const y2 = isLong ? entryY : stopY;
+
+  ctx.fillStyle = shadowColor;
+  ctx.fillRect(0, y1, ctx.canvas.width, y2 - y1);
 }
