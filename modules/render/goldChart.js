@@ -1,46 +1,49 @@
-// /render/goldChart.js
-// Core cinematic chart renderer for Golden Simulator
-// Responsibilities:
-// - Set gold theme background
-// - Draw candles
-// - Call overlays + annotations (but does NOT implement them)
+// goldChart.js
+// Golden Simulator — Cinematic Gold Chart Renderer (Simplified)
 
 import { drawOverlays } from "./overlays.js";
 import { drawAnnotations } from "./annotations.js";
 
-export function renderGoldChart(canvas, candles, axisInfo, liquidity, gf, patterns) {
+export function renderGoldChart(canvas, candles, axis, liquidity, scoring, patterns) {
   const ctx = canvas.getContext("2d");
   const { width, height } = canvas;
 
-  // Background
+  // ------------------------------
+  // BACKGROUND
+  // ------------------------------
   const bg = ctx.createLinearGradient(0, 0, 0, height);
   bg.addColorStop(0, "#0b0b0b");
   bg.addColorStop(1, "#1a1a1a");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
-  // Candles
-  for (const c of candles) {
-    drawCandle(ctx, c, axisInfo);
-  }
+  // ------------------------------
+  // CANDLES
+  // ------------------------------
+  for (const c of candles) drawCandle(ctx, c, axis);
 
-  // Overlays (liquidity zones, FVGs, GF levels)
-  drawOverlays(ctx, axisInfo, liquidity, gf);
+  // ------------------------------
+  // OVERLAYS (entry/stop/target)
+  // ------------------------------
+  drawOverlays(ctx, axis, liquidity, scoring, patterns);
 
-  // Annotations (arrows, labels, sweeps, breakouts)
-  drawAnnotations(ctx, axisInfo, candles, gf, patterns);
+  // ------------------------------
+  // ANNOTATIONS (labels, time)
+  // ------------------------------
+  drawAnnotations(ctx, axis, candles, scoring, patterns);
 }
 
 function drawCandle(ctx, c, axis) {
   const { priceToPixel } = axis;
 
-  const x = c.xCenter;
-  const highY = priceToPixel.a * c.high + priceToPixel.b;
-  const lowY = priceToPixel.a * c.low + priceToPixel.b;
-  const openY = priceToPixel.a * c.open + priceToPixel.b;
-  const closeY = priceToPixel.a * c.close + priceToPixel.b;
+  const x = c.xCenter ?? c.x;
+  const highY = priceToPixel(c.high);
+  const lowY = priceToPixel(c.low);
+  const openY = priceToPixel(c.open);
+  const closeY = priceToPixel(c.close);
 
-  const color = c.isBull ? "#ffd700" : "#ff4d4d";
+  const isBull = c.close > c.open;
+  const color = isBull ? "#ffd700" : "#ff4d4d";
 
   // Wick
   ctx.strokeStyle = color;
