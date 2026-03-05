@@ -1,7 +1,9 @@
 // liquidityModel.js
-// Advanced liquidity analysis for Golden Simulator
-// Input: candles[] from candleExtractor
-// Output: liquidity object with swing points, sweeps, equal highs/lows, FVGs, zones, confidence
+// Elite liquidity engine for Golden Simulator
+// Now includes:
+// • Even number zones (1, 5, 10, .00/.25/.50/.75)
+// • Double tops / double bottoms
+// • Big drop + signs of life reversal detection
 
 export function analyzeLiquidity(candles, options = {}) {
   const {
@@ -10,6 +12,11 @@ export function analyzeLiquidity(candles, options = {}) {
     sweepLookback = 12,
     fvgLookback = 20,
     imbalanceThreshold = 0.35,
+
+    // NEW:
+    evenLevelDistance = 0.35, // % distance allowed
+    doubleTopTolerance = 0.0025,
+    bigDropMultiplier = 1.8,
   } = options;
 
   if (candles.length < 5) return emptyLiquidity();
@@ -29,13 +36,25 @@ export function analyzeLiquidity(candles, options = {}) {
   // 5. Imbalance zones
   const imbalances = detectImbalances(candles, imbalanceThreshold);
 
-  // 6. Confidence score
+  // 6. EVEN NUMBER ZONES (NEW)
+  const evenLevels = detectEvenLevels(candles, evenLevelDistance);
+
+  // 7. DOUBLE TOP / DOUBLE BOTTOM (NEW)
+  const doubleStructures = detectDoubleStructures(swings, doubleTopTolerance);
+
+  // 8. BIG DROP + SIGNS OF LIFE (NEW)
+  const bigDropReversal = detectBigDropReversal(candles, bigDropMultiplier);
+
+  // 9. Confidence score
   const confidence = computeLiquidityConfidence({
     swings,
     equalLevels,
     sweeps,
     fvgs,
     imbalances,
+    evenLevels,
+    doubleStructures,
+    bigDropReversal,
   });
 
   return {
@@ -44,6 +63,11 @@ export function analyzeLiquidity(candles, options = {}) {
     sweeps,
     fvgs,
     imbalances,
+
+    evenLevels,        // NEW
+    doubleStructures,  // NEW
+    bigDropReversal,   // NEW
+
     confidence,
   };
 }
@@ -157,7 +181,6 @@ function detectFVGs(candles, lookback) {
     const c1 = candles[i - 1];
     const c2 = candles[i];
 
-    // Bullish FVG
     if (c0.high < c2.low) {
       fvgs.push({
         type: "bullish",
@@ -168,7 +191,6 @@ function detectFVGs(candles, lookback) {
       });
     }
 
-    // Bearish FVG
     if (c0.low > c2.high) {
       fvgs.push({
         type: "bearish",
@@ -211,28 +233,4 @@ function detectImbalances(candles, threshold) {
 }
 
 // ---------------------------
-// Confidence
-// ---------------------------
-
-function computeLiquidityConfidence({ swings, equalLevels, sweeps, fvgs, imbalances }) {
-  let score = 0;
-
-  score += Math.min(30, swings.length * 2);
-  score += Math.min(20, equalLevels.length * 5);
-  score += Math.min(25, sweeps.length * 6);
-  score += Math.min(15, fvgs.length * 3);
-  score += Math.min(10, imbalances.length * 2);
-
-  return Math.max(0, Math.min(100, score));
-}
-
-function emptyLiquidity() {
-  return {
-    swings: [],
-    equalLevels: [],
-    sweeps: [],
-    fvgs: [],
-    imbalances: [],
-    confidence: 0,
-  };
-}
+// EVEN—
