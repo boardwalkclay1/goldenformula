@@ -1,7 +1,7 @@
 // trendModel.js
 // Hyper-advanced trend analysis for Golden Simulator
 // Input: candles[] from candleExtractor
-// Output: trend object with slope, direction, momentum, exhaustion, confidence
+// Output: trend object with slope, direction, momentum, exhaustion, confidence, MA structure
 
 export function analyzeTrend(candles, options = {}) {
   const {
@@ -11,6 +11,11 @@ export function analyzeTrend(candles, options = {}) {
     exhaustionLookback = 8,
     minSlopeStrength = 0.0004,
     minMomentumStrength = 0.55,
+
+    // NEW: MA settings
+    shortMALength = 9,
+    longMALength = 21,
+    maCrossLookback = 30,
   } = options;
 
   if (candles.length < 5) {
@@ -24,9 +29,10 @@ export function analyzeTrend(candles, options = {}) {
   const slope = computeSlope(mids, slopeLookback);
 
   // 3. Determine trend direction
-  const direction = slope > minSlopeStrength ? "up"
-                  : slope < -minSlopeStrength ? "down"
-                  : "sideways";
+  const direction =
+    slope > minSlopeStrength ? "up" :
+    slope < -minSlopeStrength ? "down" :
+    "sideways";
 
   // 4. Compute momentum (rate of change)
   const momentum = computeMomentum(mids, momentumLookback);
@@ -37,7 +43,24 @@ export function analyzeTrend(candles, options = {}) {
   // 6. Detect exhaustion (loss of trend strength)
   const exhaustion = computeExhaustion(mids, exhaustionLookback);
 
-  // 7. Compute confidence score
+  // 7. Moving Averages + Crosses (NEW)
+  const closes = candles.map(c => c.close);
+  const maShort = computeSMA(closes, shortMALength);
+  const maLong = computeSMA(closes, longMALength);
+
+  const ma = {
+    shortLength: shortMALength,
+    longLength: longMALength,
+    short: maShort,
+    long: maLong,
+    lastCross: detectLastCross(maShort, maLong, maCrossLookback),
+    slope: {
+      short: computeMASlope(maShort),
+      long: computeMASlope(maLong),
+    },
+  };
+
+  // 8. Compute confidence score
   const confidence = computeTrendConfidence({
     slope,
     momentum,
@@ -56,6 +79,7 @@ export function analyzeTrend(candles, options = {}) {
     exhaustion,
     confidence,
     lastPrice: mids[mids.length - 1],
+    ma, // NEW: full MA structure for rules, narrative, timing
   };
 }
 
@@ -143,6 +167,80 @@ function computeExhaustion(values, lookback) {
 }
 
 // ---------------------------
+// Moving Averages (NEW)
+// ---------------------------
+
+function computeSMA(values, length) {
+  if (values.length < length) return [];
+  const out = [];
+  let sum = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    sum += values[i];
+    if (i >= length) {
+      sum -= values[i - length];
+    }
+    if (i >= length - 1) {
+      out.push(sum / length);
+    }
+  }
+
+  return out;
+}
+
+function detectLastCross(shortMA, longMA, lookback) {
+  const n = Math.min(shortMA.length, longMA.length, lookback);
+  if (n < 3) {
+    return { type: "none", candlesAgo: null };
+  }
+
+  const offsetShort = shortMA.length - n;
+  const offsetLong = longMA.length - n;
+
+  let lastType = "none";
+  let lastIndex = null;
+
+  for (let i = 1; i < n; i++) {
+    const prevShort = shortMA[offsetShort + i - 1];
+    const prevLong = longMA[offsetLong + i - 1];
+    const currShort = shortMA[offsetShort + i];
+    const currLong = longMA[offsetLong + i];
+
+    const prevDiff = prevShort - prevLong;
+    const currDiff = currShort - currLong;
+
+    if (prevDiff <= 0 && currDiff > 0) {
+      lastType = "bullish";
+      lastIndex = i;
+    } else if (prevDiff >= 0 && currDiff < 0) {
+      lastType = "bearish";
+      lastIndex = i;
+    }
+  }
+
+  if (lastType === "none") {
+    return { type: "none", candlesAgo: null };
+  }
+
+  const candlesAgo = n - 1 - lastIndex;
+  return { type: lastType, candlesAgo };
+}
+
+function computeMASlope(maArray) {
+  if (maArray.length < 3) return "flat";
+
+  const last = maArray[maArray.length - 1];
+  const prev = maArray[maArray.length - 3];
+  const diff = last - prev;
+
+  const threshold = Math.abs(last) * 0.0005 || 0.0005;
+
+  if (diff > threshold) return "up";
+  if (diff < -threshold) return "down";
+  return "flat";
+}
+
+// ---------------------------
 // Confidence
 // ---------------------------
 
@@ -185,5 +283,13 @@ function emptyTrend() {
     exhaustion: 0,
     confidence: 0,
     lastPrice: null,
+    ma: {
+      shortLength: null,
+      longLength: null,
+      short: [],
+      long: [],
+      lastCross: { type: "none", candlesAgo: null },
+      slope: { short: "flat", long: "flat" },
+    },
   };
 }
