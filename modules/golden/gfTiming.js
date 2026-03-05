@@ -1,44 +1,29 @@
-// Advanced timing + entry/exit engine (beginner-friendly output)
+// gfTiming.js
+// Golden Formula — Market Timing Engine
 
-export function buildGFTiming({ scoring, trend, volatility, patterns, candleSpacing }) {
-  const out = [];
+export function analyzeTiming(candles, liquidity) {
+  const last = candles[candles.length - 1];
+  const time = last.time; // HH:MM format
 
-  if (scoring.direction === "none") {
-    out.push("No clear entry or exit because the chart does not show a strong direction.");
-    return out.join("\n");
-  }
+  const burstWindow = time >= "09:30" && time <= "10:00";
+  const trendWindow = time > "10:00";
 
-  out.push("Entry and Exit Timing (Simple):");
-  out.push(`• Entry price: ${scoring.entry}`);
-  out.push(`• Stop loss: ${scoring.stop}`);
-  out.push(`• Target: ${scoring.target}`);
-  out.push("");
+  const nearWhole = liquidity.nearWhole || liquidity.nearFive || liquidity.nearTen;
+  const near200 = Math.abs(last.close - last.maBig) <= liquidity.tickSize * 4;
 
-  // Candle timing
-  const candles = patterns.breakout.active ? 2 : patterns.compression.active ? 4 : 3;
-  const minutes = candleSpacing ? Math.round(candleSpacing * candles) : null;
+  const maCluster =
+    Math.abs(last.maSmall - last.maMedium) < liquidity.tickSize * 2 &&
+    Math.abs(last.maMedium - last.maBig) < liquidity.tickSize * 2;
 
-  out.push("When to Enter:");
-  if (patterns.breakout.active) {
-    out.push("• Enter when the next candle breaks above/below the breakout level.");
-  } else if (patterns.flag.active) {
-    out.push("• Enter when price breaks out of the flag pattern.");
-  } else {
-    out.push("• Enter when the next candle moves in your direction.");
-  }
-
-  if (minutes) out.push(`• This should happen within the next ${candles} candles (~${minutes} minutes).`);
-  out.push("");
-
-  out.push("When to Exit:");
-  out.push("• Exit at the target price if price reaches it.");
-  out.push("• Exit early if price closes below your stop level.");
-  out.push("");
-
-  out.push("Extra Notes:");
-  if (volatility.regime === "high") out.push("• Price is moving fast. Moves may happen quicker than normal.");
-  if (volatility.regime === "low") out.push("• Price is slow. Be patient.");
-  if (patterns.compression.active) out.push("• Price is tight. A strong move may happen soon.");
-
-  return out.join("\n");
+  return {
+    burstWindow,
+    trendWindow,
+    nearWhole,
+    near200,
+    maCluster,
+    expectedBehavior:
+      burstWindow ? "short_burst" :
+      trendWindow ? "trend_follow" :
+      "neutral"
+  };
 }
