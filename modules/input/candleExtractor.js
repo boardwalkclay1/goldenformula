@@ -1,258 +1,80 @@
 // candleExtractor.js
-// Hyper-advanced candle extraction for Golden Simulator
-// Requires: axisDetector.js output (pixel→price mapping + chart bounds)
+// Golden Simulator — Candle, Wick & Price Shape Extraction Engine
 
-export async function extractCandles(canvas, axisInfo, options = {}) {
-  const {
-    axisXEnd,
-    axisYTop,
-    axisYBottom,
-    pixelToPrice,
-  } = axisInfo;
+export async function extractCandles(canvas, axis) {
+  const ctx = canvas.getContext("2d");
+  const { left, right, top, bottom } = axis.chartBounds;
 
-  const {
-    candleAreaLeftPadding = 8,
-    minCandleWidth = 2,
-    maxCandleWidth = 14,
-    wickBrightnessThreshold = 180,
-    bodyBrightnessThreshold = 120,
-    noiseTolerance = 0.015,
-    smoothingWindow = 3,
-  } = options;
+  const width = right - left;
+  const step = Math.max(2, Math.floor(width / 120));
 
-  const ctx = canvas.getContext('2d');
-  const { width, height } = canvas;
-
-  // 1. Define chart area (right of price axis)
-  const chartXStart = axisXEnd + candleAreaLeftPadding;
-  const chartXEnd = width - 1;
-  const chartWidth = chartXEnd - chartXStart;
-
-  const chartYStart = axisYTop;
-  const chartYEnd = axisYBottom;
-  const chartHeight = chartYEnd - chartYStart;
-
-  const img = ctx.getImageData(chartXStart, chartYStart, chartWidth, chartHeight);
-  const data = img.data;
-
-  // 2. Vertical brightness profile to detect candle columns
-  const colBrightness = new Array(chartWidth).fill(0);
-  const colCount = new Array(chartWidth).fill(0);
-
-  for (let y = 0; y < chartHeight; y++) {
-    for (let x = 0; x < chartWidth; x++) {
-      const idx = (y * chartWidth + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const a = data[idx + 3];
-
-      if (a < 40) continue;
-
-      const bright = (r + g + b) / 3;
-      colBrightness[x] += bright;
-      colCount[x]++;
-    }
-  }
-
-  const avgBrightness = colBrightness.map((sum, i) =>
-    colCount[i] > 0 ? sum / colCount[i] : 0
-  );
-
-  // 3. Smooth brightness to reduce noise
-  const smoothed = smoothArray(avgBrightness, smoothingWindow);
-
-  // 4. Detect candle columns by brightness changes
-  const candleColumns = detectCandleColumns(smoothed, {
-    minCandleWidth,
-    maxCandleWidth,
-    noiseTolerance,
-  });
-
-  // 5. For each candle column, extract wick/body geometry
-  const candles = [];
-
-  for (const col of candleColumns) {
-    const { startX, endX } = col;
-    const candle = extractSingleCandle({
-      data,
-      chartWidth,
-      chartHeight,
-      startX,
-      endX,
-      wickBrightnessThreshold,
-      bodyBrightnessThreshold,
-      pixelToPrice,
-      chartYStart,
+  const raw = [];
+  for (let x = left; x <= right; x += step) {
+    raw.push({
+      x,
+      col: sampleColumn(ctx, x, top, bottom),
     });
-
-    if (candle) candles.push(candle);
   }
 
-  // 6. Add candle index + time ordering
-  candles.sort((a, b) => a.xCenter - b.xCenter);
-  candles.forEach((c, i) => (c.index = i));
+  const candles = raw.map((r, i) => detectCandle(r, top, bottom, i)).filter(Boolean);
+  const spacing = estimateSpacing(candles);
 
   return {
     candles,
-    chartBounds: {
-      xStart: chartXStart,
-      xEnd: chartXEnd,
-      yStart: chartYStart,
-      yEnd: chartYEnd,
-    },
+    bounds: axis.chartBounds,
+    spacing,
   };
 }
 
-// ---------------------------
-// Candle Extraction Helpers
-// ---------------------------
-
-function smoothArray(arr, window) {
-  const out = [];
-  for (let i = 0; i < arr.length; i++) {
-    let sum = 0;
-    let count = 0;
-    for (let w = -window; w <= window; w++) {
-      const idx = i + w;
-      if (idx >= 0 && idx < arr.length) {
-        sum += arr[idx];
-        count++;
-      }
-    }
-    out.push(sum / count);
-  }
-  return out;
+function sampleColumn(ctx, x, top, bottom) {
+  const arr = [];
+  for (let y = top; y <= bottom; y++) arr.push(lum(ctx, x, y));
+  return arr;
 }
 
-function detectCandleColumns(brightness, opts) {
-  const { minCandleWidth, maxCandleWidth, noiseTolerance } = opts;
+function detectCandle({ x, col }, top, bottom, index) {
+  const min = Math.min(...col);
+  const max = Math.max(...col);
+  const threshold = min + (max - min) * 0.35;
 
-  const columns = [];
-  let inCandle = false;
-  let start = 0;
-
-  const threshold = computeDynamicThreshold(brightness, noiseTolerance);
-
-  for (let x = 0; x < brightness.length; x++) {
-    const isInk = brightness[x] > threshold;
-
-    if (isInk && !inCandle) {
-      inCandle = true;
-      start = x;
-    }
-
-    if (!isInk && inCandle) {
-      const end = x - 1;
-      const width = end - start + 1;
-
-      if (width >= minCandleWidth && width <= maxCandleWidth) {
-        columns.push({ startX: start, endX: end });
-      }
-
-      inCandle = false;
-    }
-  }
-
-  return columns;
-}
-
-function computeDynamicThreshold(arr, noiseTolerance) {
-  const sorted = [...arr].sort((a, b) => a - b);
-  const low = sorted[Math.floor(sorted.length * noiseTolerance)];
-  const high = sorted[Math.floor(sorted.length * (1 - noiseTolerance))];
-  return (low + high) / 2;
-}
-
-function extractSingleCandle(params) {
-  const {
-    data,
-    chartWidth,
-    chartHeight,
-    startX,
-    endX,
-    wickBrightnessThreshold,
-    bodyBrightnessThreshold,
-    pixelToPrice,
-    chartYStart,
-  } = params;
-
-  const width = endX - startX + 1;
-  const xCenter = Math.round((startX + endX) / 2);
-
-  let topWick = null;
-  let bottomWick = null;
   let bodyTop = null;
   let bodyBottom = null;
+  let high = null;
+  let low = null;
 
-  for (let y = 0; y < chartHeight; y++) {
-    let brightSum = 0;
-    let count = 0;
+  for (let i = 0; i < col.length; i++) {
+    const v = col[i];
+    if (high === null || v < col[high]) high = i;
+    if (low === null || v > col[low]) low = i;
 
-    for (let x = startX; x <= endX; x++) {
-      const idx = (y * chartWidth + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const a = data[idx + 3];
-      if (a < 40) continue;
-
-      const bright = (r + g + b) / 3;
-      brightSum += bright;
-      count++;
-    }
-
-    if (count === 0) continue;
-
-    const avg = brightSum / count;
-
-    // Wick detection
-    if (avg > wickBrightnessThreshold) {
-      if (topWick === null) topWick = y;
-      bottomWick = y;
-    }
-
-    // Body detection
-    if (avg > bodyBrightnessThreshold) {
-      if (bodyTop === null) bodyTop = y;
-      bodyBottom = y;
+    if (v < threshold) {
+      if (bodyTop === null) bodyTop = i;
+      bodyBottom = i;
     }
   }
 
-  if (topWick === null || bodyTop === null) return null;
-
-  // Convert pixel Y → price
-  const high = pixelToPrice.a * (chartYStart + topWick) + pixelToPrice.b;
-  const low = pixelToPrice.a * (chartYStart + bottomWick) + pixelToPrice.b;
-  const open = pixelToPrice.a * (chartYStart + bodyTop) + pixelToPrice.b;
-  const close = pixelToPrice.a * (chartYStart + bodyBottom) + pixelToPrice.b;
-
-  const isBull = close > open;
+  if (high === null || low === null) return null;
 
   return {
-    startX,
-    endX,
-    xCenter,
-    width,
-    high,
-    low,
-    open,
-    close,
-    isBull,
-    wickPixels: { top: topWick, bottom: bottomWick },
-    bodyPixels: { top: bodyTop, bottom: bodyBottom },
-    confidence: computeCandleConfidence({ width, high, low, open, close }),
+    index,
+    x,
+    highY: top + high,
+    lowY: top + low,
+    bodyTopY: top + (bodyTop ?? high),
+    bodyBottomY: top + (bodyBottom ?? low),
+    fromScreenshot: true,
   };
 }
 
-function computeCandleConfidence(c) {
-  const range = Math.abs(c.high - c.low);
-  const body = Math.abs(c.open - c.close);
+function estimateSpacing(candles) {
+  if (candles.length < 2) return 0;
+  const diffs = [];
+  for (let i = 1; i < candles.length; i++) diffs.push(candles[i].x - candles[i - 1].x);
+  diffs.sort((a, b) => a - b);
+  return diffs[Math.floor(diffs.length / 2)];
+}
 
-  if (range === 0) return 0;
-
-  const bodyRatio = body / range;
-  const widthScore = Math.min(1, c.width / 8);
-
-  return Math.round(100 * (0.6 * bodyRatio + 0.4 * widthScore));
+function lum(ctx, x, y) {
+  const d = ctx.getImageData(x, y, 1, 1).data;
+  return (d[0] + d[1] + d[2]) / 3;
 }
