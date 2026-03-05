@@ -1,158 +1,57 @@
 // volatilityModel.js
-// Advanced volatility analysis for Golden Simulator
-// Input: candles[] from candleExtractor
-// Output: volatility object with ATR, expansion, compression, regime, confidence
+// Golden Formula — Volatility Intelligence Engine
 
-export function analyzeVolatility(candles, options = {}) {
-  const {
-    atrLookback = 14,
-    expansionLookback = 10,
-    compressionLookback = 10,
-    regimeThresholdHigh = 1.8,
-    regimeThresholdLow = 0.65,
-  } = options;
+export function analyzeVolatility(candles) {
+  if (candles.length < 20) return basicVolatility();
 
-  if (candles.length < 5) {
-    return emptyVolatility();
-  }
+  const ranges = candles.map(c => c.high - c.low);
+  const atr14 = atr(ranges, 14);
 
-  // 1. Compute true ranges
-  const trs = computeTrueRanges(candles);
+  const closes = candles.map(c => c.close);
+  const recent = closes.slice(-20);
+  const stdDev = standardDeviation(recent);
 
-  // 2. Compute ATR
-  const atr = computeATR(trs, atrLookback);
+  const last = candles[candles.length - 1];
+  const price = last.close;
 
-  // 3. Expansion (volatility increasing)
-  const expansion = computeExpansion(trs, expansionLookback);
+  const atrPercent = price > 0 ? (atr14 / price) * 100 : 0;
+  const stdPercent = price > 0 ? (stdDev / price) * 100 : 0;
 
-  // 4. Compression (volatility decreasing)
-  const compression = computeCompression(trs, compressionLookback);
-
-  // 5. Volatility regime
-  const regime = classifyRegime(atr, trs, regimeThresholdHigh, regimeThresholdLow);
-
-  // 6. Confidence score
-  const confidence = computeVolatilityConfidence({
-    atr,
-    expansion,
-    compression,
-    regime,
-  });
+  const regime =
+    atrPercent > 5 || stdPercent > 4 ? "high" :
+    atrPercent < 2 && stdPercent < 1.5 ? "low" :
+    "normal";
 
   return {
-    atr,
-    expansion,
-    compression,
+    atr14,
+    atrPercent,
+    stdDev,
+    stdPercent,
     regime,
-    confidence,
   };
 }
 
-// ---------------------------
-// True Range
-// ---------------------------
-
-function computeTrueRanges(candles) {
-  const trs = [];
-
-  for (let i = 1; i < candles.length; i++) {
-    const c = candles[i];
-    const prev = candles[i - 1];
-
-    const highLow = c.high - c.low;
-    const highPrevClose = Math.abs(c.high - prev.close);
-    const lowPrevClose = Math.abs(c.low - prev.close);
-
-    trs.push(Math.max(highLow, highPrevClose, lowPrevClose));
-  }
-
-  return trs;
+function atr(ranges, period) {
+  if (ranges.length < period) return 0;
+  const slice = ranges.slice(-period);
+  const sum = slice.reduce((a, b) => a + b, 0);
+  return sum / period;
 }
 
-// ---------------------------
-// ATR
-// ---------------------------
-
-function computeATR(trs, lookback) {
-  const n = Math.min(trs.length, lookback);
-  if (n === 0) return 0;
-
-  const slice = trs.slice(trs.length - n);
-  return slice.reduce((a, b) => a + b, 0) / n;
+function standardDeviation(series) {
+  if (series.length === 0) return 0;
+  const mean = series.reduce((a, b) => a + b, 0) / series.length;
+  const variance =
+    series.reduce((sum, v) => sum + (v - mean) ** 2, 0) / series.length;
+  return Math.sqrt(variance);
 }
 
-// ---------------------------
-// Expansion
-// ---------------------------
-
-function computeExpansion(trs, lookback) {
-  const n = Math.min(trs.length, lookback);
-  if (n < 3) return 0;
-
-  const slice = trs.slice(trs.length - n);
-  const first = slice[0];
-  const last = slice[slice.length - 1];
-
-  return (last - first) / first;
-}
-
-// ---------------------------
-// Compression
-// ---------------------------
-
-function computeCompression(trs, lookback) {
-  const n = Math.min(trs.length, lookback);
-  if (n < 3) return 0;
-
-  const slice = trs.slice(trs.length - n);
-  const maxVal = Math.max(...slice);
-  const minVal = Math.min(...slice);
-
-  return (maxVal - minVal) / maxVal;
-}
-
-// ---------------------------
-// Regime Classification
-// ---------------------------
-
-function classifyRegime(atr, trs, highThresh, lowThresh) {
-  const lastTR = trs[trs.length - 1];
-  const ratio = lastTR / atr;
-
-  if (ratio > highThresh) return "high-volatility";
-  if (ratio < lowThresh) return "low-volatility";
-  return "normal";
-}
-
-// ---------------------------
-// Confidence
-// ---------------------------
-
-function computeVolatilityConfidence({ atr, expansion, compression, regime }) {
-  let score = 0;
-
-  // ATR magnitude
-  score += Math.min(40, atr * 10);
-
-  // Expansion
-  if (expansion > 0) score += Math.min(30, expansion * 100);
-
-  // Compression penalty
-  score -= Math.min(20, compression * 80);
-
-  // Regime bonus
-  if (regime === "high-volatility") score += 20;
-  if (regime === "low-volatility") score -= 10;
-
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-
-function emptyVolatility() {
+function basicVolatility() {
   return {
-    atr: 0,
-    expansion: 0,
-    compression: 0,
-    regime: "normal",
-    confidence: 0,
+    atr14: 0,
+    atrPercent: 0,
+    stdDev: 0,
+    stdPercent: 0,
+    regime: "unknown",
   };
 }
