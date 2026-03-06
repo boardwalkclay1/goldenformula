@@ -6,7 +6,7 @@
 // ------------------------------
 import { detectPriceAxis } from "./modules/input/axisDetector.js";
 import { extractCandles } from "./modules/input/candleExtractor.js";
-import { parseTimeAxis } from "./modules/input/timeAxisParser.js";
+import { parseTimeAxis } from "./modules/input/timeParser.js";
 
 // ------------------------------
 // ANALYSIS MODULES
