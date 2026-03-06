@@ -38,7 +38,6 @@ import { parseChainLoose, pickBestContract } from "./options.js";
 // ------------------------------
 // MAIN PIPELINE FUNCTION
 // ------------------------------
-// ocrText is optional and comes from simulator.js (Tesseract output)
 export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) {
   // 1) INPUT STAGE ---------------------------------------
   log("Detecting price axis...");
@@ -74,13 +73,24 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     time,
   });
 
+  log("Building timing guidance...");
+  const timing = buildGFTiming({
+    candles: candleData.candles,
+    trend,
+    liquidity,
+    volatility,
+    patterns,
+    time,
+  });
+
   log("Scoring Golden Formula...");
   const scoring = scoreGoldenFormula({
     trend,
-    volatility,
+    patterns,
     liquidity,
+    timing,
     rules,
-    candles: candleData.candles,
+    volatility,
   });
 
   log("Building narrative...");
@@ -92,16 +102,6 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     liquidity,
     patterns,
     ocrText,
-  });
-
-  log("Building timing guidance...");
-  const timing = buildGFTiming({
-    candles: candleData.candles,
-    trend,
-    liquidity,
-    volatility,
-    patterns,
-    time,
   });
 
   // 4) RENDERING STAGE -----------------------------------
