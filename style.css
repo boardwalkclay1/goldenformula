@@ -23,32 +23,32 @@
 
 body {
   font-family: "Inter", Arial, sans-serif;
-  background: var(--black) url('images/simulator.png') center/cover no-repeat fixed;
+  background: var(--black);
   color: var(--text);
   margin: 0;
   padding: 0;
   font-size: 18px;
   line-height: 1.6;
+  position: relative;
+  overflow-x: hidden;
 }
 
-h1, h2, h3 {
-  color: var(--gold);
-  font-weight: 700;
-  letter-spacing: 0.5px;
+/* 50% FADED BACKGROUND IMAGE LAYER ------------------------ */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('images/simulator.png') center/cover no-repeat;
+  opacity: 0.50; /* <<< 50% fade */
+  z-index: -1;
+  pointer-events: none;
 }
 
-p, li {
-  font-size: 18px;
-}
+/* REMOVE ANY OTHER BACKGROUND PNG LAYERS ------------------ */
 
-a {
-  color: var(--gold-light);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-a:hover {
-  color: var(--gold);
+body::after {
+  content: none;
 }
 
 /* HEADER -------------------------------------------------- */
@@ -211,11 +211,4 @@ canvas {
   width: 100%;
   max-width: 1000px;
   box-shadow: 0 6px 20px var(--shadow);
-}
-
-/* REMOVE ALL BACKGROUND PNGS ------------------------------ */
-
-body::before,
-body::after {
-  content: none;
 }
