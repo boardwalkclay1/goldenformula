@@ -3,7 +3,7 @@
 // Fully aligned with integers, even numbers, MA structure, patterns,
 // liquidity sweeps, volatility regimes, trend phase, and time-of-day behavior.
 
-export function evaluateRules({ candles, trend, patterns, liquidity, volatility, time }) {
+export function evaluateGFRules({ candles, trend, patterns, liquidity, volatility, time }) {
   const last = candles[candles.length - 1];
   const prev = candles[candles.length - 2] ?? last;
 
@@ -103,8 +103,17 @@ export function evaluateRules({ candles, trend, patterns, liquidity, volatility,
   // 7. TIME OF DAY LOGIC
   // ------------------------------
   const spacingMin = time.spacing.minutes;
-  const isOpen = spacingMin <= 5 && last.timestamp % (24 * 60 * 60 * 1000) < 60 * 60 * 1000;
-  const isPowerHour = spacingMin <= 5 && last.timestamp % (24 * 60 * 60 * 1000) > (6.5 * 60 * 60 * 1000);
+
+  const msInDay = 24 * 60 * 60 * 1000;
+  const msSinceMidnight = last.timestamp % msInDay;
+
+  const isOpen =
+    spacingMin <= 5 &&
+    msSinceMidnight < 60 * 60 * 1000;
+
+  const isPowerHour =
+    spacingMin <= 5 &&
+    msSinceMidnight > (6.5 * 60 * 60 * 1000);
 
   const timeBoost =
     (isOpen && volExpanding) ||
