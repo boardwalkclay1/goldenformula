@@ -28,8 +28,6 @@ import { buildGFTiming } from "./modules/golden/gfTiming.js";
 // RENDERING MODULES
 // ------------------------------
 import { renderGoldChart } from "./modules/render/goldChart.js";
-import { renderOverlays } from "./modules/render/overlays.js";
-import { renderAnnotations } from "./modules/render/annotations.js";
 
 // ------------------------------
 // UTILITIES (ROOT LEVEL)
@@ -108,28 +106,14 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
 
   // 4) RENDERING STAGE -----------------------------------
   log("Rendering cinematic chart...");
-  renderGoldChart(canvas, candleData.candles, axis, liquidity, scoring, patterns);
-
-  log("Rendering overlays...");
-  renderOverlays(canvas, {
+  renderGoldChart(
+    canvas,
+    candleData.candles,
     axis,
-    candles: candleData.candles,
-    rules,
+    liquidity,
     scoring,
-    timing,
-    patterns,
-  });
-
-  log("Rendering annotations...");
-  renderAnnotations(canvas, {
-    axis,
-    candles: candleData.candles,
-    rules,
-    scoring,
-    narrative,
-    timing,
-    ocrText,
-  });
+    patterns
+  );
 
   // 5) PIPELINE OUTPUT -----------------------------------
   return {
