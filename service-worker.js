@@ -1,44 +1,56 @@
-const CACHE_NAME = "golden-formula-shell-v1";
+// ===============================
+// GOLDEN FORMULA SERVICE WORKER — UPGRADED
+// ===============================
 
-// Only cache the bare minimum app shell
+const CACHE_NAME = "golden-formula-shell-v3";
+
+// Only cache the bare minimum app shell (HTML + manifest + icons)
 const FILES_TO_CACHE = [
-  "/",
-  "/index.html",
-  "/manifest.json"
+  "/goldenformula/",
+  "/goldenformula/index.html",
+  "/goldenformula/simulator.html",
+  "/goldenformula/manifest.json",
+  "/goldenformula/gf-logo.png",
+  "/goldenformula/favicon.ico"
 ];
 
+// INSTALL — cache shell only
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll(FILES_TO_CACHE)
+    )
   );
+  self.skipWaiting();
 });
 
+// ACTIVATE — clean old caches
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       )
     )
   );
+  self.clients.claim();
 });
 
-// NEVER cache JS — always fetch fresh Golden Formula logic
+// FETCH — JS always fresh, shell cache-first
 self.addEventListener("fetch", event => {
-  const url = event.request.url;
+  const req = event.request;
+  const url = req.url;
 
-  // Always fetch JS fresh (Golden Formula engine, OCR, parsing, renderer)
+  // Always fetch JS fresh (engine logic, OCR, parsing, renderer)
   if (url.endsWith(".js")) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(fetch(req));
     return;
   }
 
-  // Cache-first for HTML + manifest only
+  // Cache-first for HTML + manifest + icons
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+    caches.match(req).then(cached => {
+      return cached || fetch(req);
     })
   );
 });
