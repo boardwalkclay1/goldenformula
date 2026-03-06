@@ -1,16 +1,13 @@
 // annotations.js
 // Golden Simulator — Clean Labels, Time Stamps & Arrows
 
-export function renderAnnotations(ctx, axis, candles, scoring, patterns) {
+export function drawAnnotations(ctx, axis, candles, scoring, patterns) {
   if (!candles?.length || !scoring) return;
 
-  const last = candles[candles.length - 1];
-
-  // Entry price (from scoring or rules)
+  // Determine entry price from scoring or rules
   const entry =
     scoring.entry ??
     scoring.rules?.entry ??
-    scoring.rules?.target ??
     null;
 
   if (!entry) return;
