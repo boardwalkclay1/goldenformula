@@ -6,7 +6,7 @@
 // ------------------------------
 import { detectPriceAxis } from "./modules/input/axisDetector.js";
 import { extractCandles } from "./modules/input/candleExtractor.js";
-import { parseTimeAxis } from "./modules/input/timeAxisParser.js"; // <-- FIXED NAME
+import { parseTimeAxis } from "./modules/input/timeAxisParser.js";
 
 // ------------------------------
 // ANALYSIS MODULES
@@ -22,7 +22,7 @@ import { analyzePatterns } from "./modules/analysis/patternModel.js";
 import { evaluateGFRules } from "./modules/golden/gfRules.js";
 import { scoreGoldenFormula } from "./modules/golden/gfScoring.js";
 import { buildGFNarrative } from "./modules/golden/gfNarrative.js";
-import { buildGFTiming } from "./modules/golden/gfTiming.js"; // <-- gfTiming.js must export buildGFTiming
+import { buildGFTiming } from "./modules/golden/gfTiming.js";
 
 // ------------------------------
 // RENDERING MODULES
@@ -68,11 +68,12 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
   // 3) GOLDEN FORMULA EVALUATION -------------------------
   log("Evaluating Golden Formula rules...");
   const rules = evaluateGFRules({
-    trend,
-    volatility,
-    liquidity,
     candles: candleData.candles,
-    ocrText,
+    trend,
+    patterns,
+    liquidity,
+    volatility,
+    time,
   });
 
   log("Scoring Golden Formula...");
@@ -95,7 +96,6 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     ocrText,
   });
 
-  // 🔥 TIMING ENGINE — now matches your gfTiming.js
   log("Building timing guidance...");
   const timing = buildGFTiming({
     candles: candleData.candles,
@@ -103,7 +103,7 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     liquidity,
     volatility,
     patterns,
-    time, // pass full time object, not just spacing
+    time,
   });
 
   // 4) RENDERING STAGE -----------------------------------
