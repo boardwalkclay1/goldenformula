@@ -17,23 +17,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const strategyTag = document.getElementById("strategy-tag");
 
   const canvas = document.getElementById("sim-canvas");
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-  // Hard guard: if any core element is missing, bail loudly
-  if (!dropZone || !uploadBtn || !fileInput || !canvas) {
-    console.error("Simulator wiring error: missing DOM elements.");
+  if (!dropZone || !uploadBtn || !fileInput || !canvas || !ctx) {
+    console.error("Simulator wiring error: missing DOM elements or context.");
     return;
   }
 
+  // --------------------------------------------------
+  // LOGGING
+  // --------------------------------------------------
   function log(msg) {
     logEl.textContent += msg + "\n";
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  // --------------------------------------------------
   // GOLD COIN BUTTON → FILE INPUT
+  // --------------------------------------------------
   uploadBtn.addEventListener("click", () => fileInput.click());
 
+  // --------------------------------------------------
   // DRAG & DROP
+  // --------------------------------------------------
   dropZone.addEventListener("click", () => fileInput.click());
 
   dropZone.addEventListener("dragover", e => {
@@ -52,13 +58,45 @@ document.addEventListener("DOMContentLoaded", () => {
     if (file) loadImage(file);
   });
 
+  // --------------------------------------------------
   // FILE INPUT
+  // --------------------------------------------------
   fileInput.addEventListener("change", e => {
     const file = e.target.files[0];
     if (file) loadImage(file);
   });
 
-  // LOAD IMAGE → DRAW TO CANVAS
+  // --------------------------------------------------
+  // IMAGE ENHANCEMENT FOR OCR (PHONE-FRIENDLY)
+  // --------------------------------------------------
+  function enhanceForOCR(ctx, w, h) {
+    try {
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        // Slight contrast boost
+        data[i] = Math.min(255, data[i] * 1.2);
+        data[i + 1] = Math.min(255, data[i + 1] * 1.2);
+        data[i + 2] = Math.min(255, data[i + 2] * 1.2);
+
+        // Light thresholding to sharpen text
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        const v = avg > 140 ? 255 : 0;
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+    } catch (err) {
+      console.warn("OCR enhancement skipped:", err.message);
+    }
+  }
+
+  // --------------------------------------------------
+  // LOAD IMAGE → DRAW TO CANVAS (REAL ASPECT RATIO)
+  // --------------------------------------------------
   function loadImage(file) {
     statusEl.textContent = "Loading screenshot...";
     logEl.textContent = "";
@@ -69,11 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const img = new Image();
     img.onload = () => {
-      canvas.width = 900;
-      canvas.height = 400;
+      // Preserve real screenshot dimensions (phone or desktop)
+      canvas.width = img.width;
+      canvas.height = img.height;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      // Enhance for OCR (especially for phone screenshots)
+      enhanceForOCR(ctx, canvas.width, canvas.height);
 
       statusEl.textContent = "Running Golden Formula...";
       runPipeline();
@@ -85,7 +127,9 @@ document.addEventListener("DOMContentLoaded", () => {
     img.src = URL.createObjectURL(file);
   }
 
+  // --------------------------------------------------
   // OCR + FULL PIPELINE
+  // --------------------------------------------------
   async function runPipeline() {
     try {
       if (typeof Tesseract === "undefined") {
@@ -104,7 +148,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       statusEl.textContent = "Done.";
 
+      // --------------------------------------------------
       // SUMMARY OUTPUT
+      // --------------------------------------------------
       outputEl.innerHTML = `
         <p><strong>Direction:</strong> ${result.rules.direction.toUpperCase()}</p>
         <p><strong>Entry:</strong> ${result.rules.entry.toFixed(2)}</p>
@@ -113,15 +159,21 @@ document.addEventListener("DOMContentLoaded", () => {
         <p><strong>Confidence:</strong> ${result.scoring.confidence.toUpperCase()} (${result.scoring.score})</p>
       `;
 
+      // --------------------------------------------------
       // CONFIDENCE METER
+      // --------------------------------------------------
       confidenceFill.style.width = `${result.scoring.score}%`;
 
+      // --------------------------------------------------
       // STRATEGY TAG
+      // --------------------------------------------------
       strategyTag.textContent =
         result.strategy?.toUpperCase() ??
         result.rules.direction.toUpperCase();
 
+      // --------------------------------------------------
       // NARRATIVE
+      // --------------------------------------------------
       narrativeList.innerHTML = "";
       if (Array.isArray(result.narrative)) {
         result.narrative.forEach(line => {
@@ -138,7 +190,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // --------------------------------------------------
   // OCR TEXT CLEANER
+  // --------------------------------------------------
   function extractOCR(words) {
     return words.map(w => ({
       text: w.text?.trim() ?? "",
