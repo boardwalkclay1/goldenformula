@@ -74,7 +74,7 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
   });
 
   log("Building timing guidance...");
-  const timing = buildGFTiming({
+  let timing = buildGFTiming({
     candles: candleData.candles,
     trend,
     liquidity,
@@ -82,6 +82,17 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     patterns,
     time,
   });
+
+  // ⭐ SAFETY: Guarantee timing always exists
+  if (!timing || typeof timing !== "object") {
+    timing = {
+      burstWindow: null,
+      burstStrength: null,
+      windowStart: null,
+      windowEnd: null,
+      confidence: "low",
+    };
+  }
 
   log("Scoring Golden Formula...");
   const scoring = scoreGoldenFormula({
@@ -102,6 +113,7 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     liquidity,
     patterns,
     ocrText,
+    timing, // ⭐ now always safe
   });
 
   // 4) RENDERING STAGE -----------------------------------
@@ -127,7 +139,7 @@ export async function runGoldenPipeline(canvas, log = () => {}, ocrText = null) 
     rules,
     scoring,
     narrative,
-    timing,
+    timing, // ⭐ always defined
     ocrText,
 
     nearestEven,
