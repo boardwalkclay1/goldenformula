@@ -8,29 +8,92 @@
 </head>
 <body class="gold-theme">
   <main class="layout">
-    <section class="left">
-      <h1>Golden Simulator</h1>
 
+    <!-- LEFT PANEL: INPUT + SUMMARY + LOG -->
+    <section class="left">
+      <h1 class="app-title">Golden Simulator</h1>
+
+      <!-- UPLOAD / DROP ZONE -->
       <div id="drop-zone" class="drop-zone">
-        <p>Drag & drop Webull chart screenshot here<br>or click to upload.</p>
+        <p class="drop-text">
+          Drag & drop Webull chart screenshot here<br>
+          <span class="drop-sub">or click to upload.</span>
+        </p>
       </div>
       <input type="file" id="file-input" accept="image/*" style="display:none;">
 
-      <p id="sim-status"></p>
+      <!-- STATUS -->
+      <p id="sim-status" class="sim-status"></p>
 
-      <div id="sim-output"></div>
+      <!-- SUMMARY BOX -->
+      <section class="summary-card">
+        <h2>Setup Summary</h2>
+        <div id="sim-output" class="summary-grid">
+          <!-- Filled by simulator.js -->
+          <!-- Example:
+          <p><strong>Direction:</strong> LONG</p>
+          <p><strong>Entry:</strong> 123.45</p>
+          <p><strong>Stop:</strong> 118.00</p>
+          <p><strong>Target:</strong> 135.00</p>
+          <p><strong>Confidence:</strong> HIGH (87)</p>
+          -->
+        </div>
 
-      <h3>Logic Log</h3>
-      <pre id="sim-log"></pre>
+        <!-- CONFIDENCE METER -->
+        <div class="confidence-block">
+          <span class="confidence-label">Confidence Meter</span>
+          <div class="confidence-bar">
+            <div id="confidence-fill" class="confidence-fill"></div>
+          </div>
+        </div>
+
+        <!-- STRATEGY TAG -->
+        <div class="strategy-tag" id="strategy-tag">
+          <!-- e.g. CALL / PUT / STRADDLE -->
+        </div>
+      </section>
+
+      <!-- NARRATIVE LIST -->
+      <section class="narrative-card">
+        <h2>Golden Formula Narrative</h2>
+        <ul id="narrative-list" class="narrative-list">
+          <!-- Filled by gfNarrative output if you wire it -->
+        </ul>
+      </section>
+
+      <!-- LOGIC LOG -->
+      <section class="log-card">
+        <h3>Logic Log</h3>
+        <pre id="sim-log" class="sim-log"></pre>
+      </section>
     </section>
 
+    <!-- RIGHT PANEL: CHART -->
     <section class="right">
-      <canvas id="sim-canvas" width="900" height="400"></canvas>
+      <div class="chart-wrapper">
+        <canvas id="sim-canvas" width="900" height="400"></canvas>
+        <div class="chart-legend">
+          <span class="legend-item">
+            <span class="legend-color legend-entry"></span> Entry
+          </span>
+          <span class="legend-item">
+            <span class="legend-color legend-stop"></span> Stop Loss
+          </span>
+          <span class="legend-item">
+            <span class="legend-color legend-target"></span> Target
+          </span>
+        </div>
+      </div>
     </section>
+
   </main>
 
+  <!-- OCR -->
   <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+
+  <!-- CORE PIPELINE + SIMULATOR -->
   <script type="module" src="core-logic.js"></script>
   <script type="module" src="simulator.js"></script>
 </body>
 </html>
+
