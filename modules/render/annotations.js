@@ -1,9 +1,18 @@
 // annotations.js
 // Golden Simulator — Clean Labels, Time Stamps & Arrows
 
-export function drawAnnotations(ctx, axis, candles, scoring, patterns) {
+export function renderAnnotations(ctx, axis, candles, scoring, patterns) {
+  if (!candles?.length || !scoring) return;
+
   const last = candles[candles.length - 1];
-  const entry = scoring.entry ?? scoring.rules?.entry;
+
+  // Entry price (from scoring or rules)
+  const entry =
+    scoring.entry ??
+    scoring.rules?.entry ??
+    scoring.rules?.target ??
+    null;
+
   if (!entry) return;
 
   const entryIndex = candles.length - 1;
@@ -28,6 +37,9 @@ export function drawAnnotations(ctx, axis, candles, scoring, patterns) {
   }
 }
 
+// ------------------------------
+// ARROW DRAWING
+// ------------------------------
 function drawArrow(ctx, x, y) {
   ctx.fillStyle = "#ffd700";
   ctx.beginPath();
@@ -38,6 +50,9 @@ function drawArrow(ctx, x, y) {
   ctx.fill();
 }
 
+// ------------------------------
+// TIME FORMATTER
+// ------------------------------
 function formatTime(ts) {
   const d = new Date(ts);
   const hh = String(d.getHours()).padStart(2, "0");
