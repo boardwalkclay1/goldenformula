@@ -1,6 +1,9 @@
 // goldChart.js
 // Golden Simulator — Cinematic Gold Chart Renderer (Simplified)
 
+// Because this file is inside /modules/render/
+// all imports must reference THIS folder.
+
 import { drawOverlays } from "./overlays.js";
 import { drawAnnotations } from "./annotations.js";
 
