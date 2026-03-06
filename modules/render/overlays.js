@@ -1,42 +1,32 @@
 // overlays.js
 // Golden Simulator — Entry/Stop/Target + Shadow Projection Overlays
 
-export function drawOverlays(ctx, axis, liquidity, scoring, patterns) {
+export function renderOverlays(ctx, { axis, scoring }) {
   const { priceToPixel } = axis;
-  const entry = scoring.entry ?? scoring.rules?.entry;
-  const stop = scoring.stop ?? scoring.rules?.stop;
+
+  const entry  = scoring.entry  ?? scoring.rules?.entry;
+  const stop   = scoring.stop   ?? scoring.rules?.stop;
   const target = scoring.target ?? scoring.rules?.target;
 
   if (!entry || !stop || !target) return;
 
-  // ------------------------------
-  // LINE COLORS
-  // ------------------------------
-  const gold = "#ffd700";
+  const gold  = "#ffd700";
   const green = "#00ff99";
-  const red = "#ff4d4d";
+  const red   = "#ff4d4d";
 
-  // ------------------------------
-  // ENTRY LINE
-  // ------------------------------
+  // ENTRY
   drawHLine(ctx, priceToPixel(entry), gold, 2);
   drawLabel(ctx, "ENTRY", priceToPixel(entry), gold);
 
-  // ------------------------------
-  // STOP LOSS LINE
-  // ------------------------------
+  // STOP LOSS
   drawHLine(ctx, priceToPixel(stop), red, 2);
   drawLabel(ctx, "STOP LOSS", priceToPixel(stop), red);
 
-  // ------------------------------
-  // TARGET LINE
-  // ------------------------------
+  // TARGET
   drawHLine(ctx, priceToPixel(target), green, 2);
   drawLabel(ctx, "TARGET", priceToPixel(target), green);
 
-  // ------------------------------
-  // SHADOW PROJECTION
-  // ------------------------------
+  // SHADOW
   drawShadow(ctx, axis, entry, target, stop);
 }
 
@@ -58,13 +48,16 @@ function drawLabel(ctx, text, y, color) {
 function drawShadow(ctx, axis, entry, target, stop) {
   const { priceToPixel } = axis;
 
-  const entryY = priceToPixel(entry);
+  const entryY  = priceToPixel(entry);
   const targetY = priceToPixel(target);
-  const stopY = priceToPixel(stop);
+  const stopY   = priceToPixel(stop);
 
   const isLong = target > entry;
 
-  const shadowColor = isLong ? "rgba(0,255,150,0.15)" : "rgba(255,80,80,0.15)";
+  const shadowColor = isLong
+    ? "rgba(0,255,150,0.15)"
+    : "rgba(255,80,80,0.15)";
+
   const y1 = isLong ? targetY : entryY;
   const y2 = isLong ? entryY : stopY;
 
