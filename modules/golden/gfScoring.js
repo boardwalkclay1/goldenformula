@@ -1,7 +1,7 @@
-// gfScoringEngine.js
+// gfScoring.js
 // Golden Formula — Ultra-Advanced Confidence Scoring Engine
 
-export function scoreSetup({ trend, patterns, liquidity, timing, rules, volatility }) {
+export function scoreGoldenFormula({ trend, patterns, liquidity, timing, rules, volatility }) {
   let score = 50; // neutral baseline
 
   // ------------------------------
