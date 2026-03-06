@@ -3,26 +3,37 @@
 
 import { runGoldenPipeline } from "./core-logic.js";
 
+// DOM ELEMENTS
 const dropZone = document.getElementById("drop-zone");
+const uploadBtn = document.getElementById("upload-btn");
 const fileInput = document.getElementById("file-input");
+
 const statusEl = document.getElementById("sim-status");
 const logEl = document.getElementById("sim-log");
 const outputEl = document.getElementById("sim-output");
+const narrativeList = document.getElementById("narrative-list");
+const confidenceFill = document.getElementById("confidence-fill");
+const strategyTag = document.getElementById("strategy-tag");
+
 const canvas = document.getElementById("sim-canvas");
+const ctx = canvas.getContext("2d");
 
-let ctx = canvas.getContext("2d");
-
-// ------------------------------
+// --------------------------------------------------
 // LOGGING
-// ------------------------------
+// --------------------------------------------------
 function log(msg) {
   logEl.textContent += msg + "\n";
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-// ------------------------------
-// FILE HANDLING
-// ------------------------------
+// --------------------------------------------------
+// GOLD COIN BUTTON → FILE INPUT
+// --------------------------------------------------
+uploadBtn.addEventListener("click", () => fileInput.click());
+
+// --------------------------------------------------
+// DRAG & DROP
+// --------------------------------------------------
 dropZone.addEventListener("click", () => fileInput.click());
 
 dropZone.addEventListener("dragover", e => {
@@ -41,33 +52,40 @@ dropZone.addEventListener("drop", e => {
   if (file) loadImage(file);
 });
 
+// --------------------------------------------------
+// FILE INPUT
+// --------------------------------------------------
 fileInput.addEventListener("change", e => {
   const file = e.target.files[0];
   if (file) loadImage(file);
 });
 
-// ------------------------------
+// --------------------------------------------------
 // LOAD IMAGE → DRAW TO CANVAS
-// ------------------------------
+// --------------------------------------------------
 function loadImage(file) {
-  statusEl.textContent = "Loading image...";
+  statusEl.textContent = "Loading screenshot...";
   logEl.textContent = "";
   outputEl.textContent = "";
+  narrativeList.innerHTML = "";
+  confidenceFill.style.width = "0%";
+  strategyTag.textContent = "";
 
   const img = new Image();
   img.onload = () => {
     canvas.width = 900;
     canvas.height = 400;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
     statusEl.textContent = "Running Golden Formula...";
     runPipeline();
   };
   img.src = URL.createObjectURL(file);
 }
 
-// ------------------------------
-// OCR + PIPELINE
-// ------------------------------
+// --------------------------------------------------
+// OCR + FULL PIPELINE
+// --------------------------------------------------
 async function runPipeline() {
   try {
     log("Extracting text (OCR)...");
@@ -75,21 +93,45 @@ async function runPipeline() {
     const ocrText = extractOCR(ocr.data.words);
 
     log("Running Golden Formula pipeline...");
-    const result = await runGoldenPipeline(canvas, log);
+    const result = await runGoldenPipeline(canvas, log, ocrText);
 
     log("Rendering chart...");
-    // goldChart.js handles everything (candles, overlays, annotations)
-    // runGoldenPipeline already calls renderGoldChart internally
+    // goldChart.js handles rendering internally
 
     statusEl.textContent = "Done.";
 
+    // --------------------------------------------------
+    // SUMMARY OUTPUT
+    // --------------------------------------------------
     outputEl.innerHTML = `
-      <p><strong>Direction:</strong> ${result.rules.direction}</p>
+      <p><strong>Direction:</strong> ${result.rules.direction.toUpperCase()}</p>
       <p><strong>Entry:</strong> ${result.rules.entry.toFixed(2)}</p>
       <p><strong>Stop:</strong> ${result.rules.stop.toFixed(2)}</p>
       <p><strong>Target:</strong> ${result.rules.target.toFixed(2)}</p>
-      <p><strong>Confidence:</strong> ${result.scoring.confidence}</p>
+      <p><strong>Confidence:</strong> ${result.scoring.confidence.toUpperCase()} (${result.scoring.score})</p>
     `;
+
+    // --------------------------------------------------
+    // CONFIDENCE METER
+    // --------------------------------------------------
+    confidenceFill.style.width = `${result.scoring.score}%`;
+
+    // --------------------------------------------------
+    // STRATEGY TAG
+    // --------------------------------------------------
+    strategyTag.textContent = result.strategy?.toUpperCase() ?? result.rules.direction.toUpperCase();
+
+    // --------------------------------------------------
+    // NARRATIVE
+    // --------------------------------------------------
+    narrativeList.innerHTML = "";
+    if (result.narrative && Array.isArray(result.narrative)) {
+      result.narrative.forEach(line => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        narrativeList.appendChild(li);
+      });
+    }
 
   } catch (err) {
     console.error(err);
@@ -98,9 +140,9 @@ async function runPipeline() {
   }
 }
 
-// ------------------------------
+// --------------------------------------------------
 // OCR TEXT CLEANER
-// ------------------------------
+// --------------------------------------------------
 function extractOCR(words) {
   return words.map(w => ({
     text: w.text.trim(),
