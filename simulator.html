@@ -1,4 +1,3 @@
-<!-- simulator.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,40 +5,32 @@
   <title>Golden Simulator</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="gold-theme">
+
   <main class="layout">
 
-    <!-- LEFT PANEL: INPUT + SUMMARY + LOG -->
+    <!-- LEFT PANEL -->
     <section class="left">
+
       <h1 class="app-title">Golden Simulator</h1>
 
-      <!-- UPLOAD / DROP ZONE -->
-      <div id="drop-zone" class="drop-zone">
-        <p class="drop-text">
-          Drag & drop Webull chart screenshot here<br>
-          <span class="drop-sub">or click to upload.</span>
-        </p>
-      </div>
+      <!-- GOLD COIN UPLOAD BUTTON -->
+      <button id="upload-btn" class="gold-coin-btn">
+        <img src="gold-coin.png" class="coin-icon">
+        Upload Screenshot
+      </button>
+
       <input type="file" id="file-input" accept="image/*" style="display:none;">
 
       <!-- STATUS -->
       <p id="sim-status" class="sim-status"></p>
 
-      <!-- SUMMARY BOX -->
+      <!-- SUMMARY -->
       <section class="summary-card">
         <h2>Setup Summary</h2>
-        <div id="sim-output" class="summary-grid">
-          <!-- Filled by simulator.js -->
-          <!-- Example:
-          <p><strong>Direction:</strong> LONG</p>
-          <p><strong>Entry:</strong> 123.45</p>
-          <p><strong>Stop:</strong> 118.00</p>
-          <p><strong>Target:</strong> 135.00</p>
-          <p><strong>Confidence:</strong> HIGH (87)</p>
-          -->
-        </div>
+        <div id="sim-output" class="summary-grid"></div>
 
-        <!-- CONFIDENCE METER -->
         <div class="confidence-block">
           <span class="confidence-label">Confidence Meter</span>
           <div class="confidence-bar">
@@ -47,31 +38,28 @@
           </div>
         </div>
 
-        <!-- STRATEGY TAG -->
-        <div class="strategy-tag" id="strategy-tag">
-          <!-- e.g. CALL / PUT / STRADDLE -->
-        </div>
+        <div class="strategy-tag" id="strategy-tag"></div>
       </section>
 
-      <!-- NARRATIVE LIST -->
+      <!-- NARRATIVE -->
       <section class="narrative-card">
         <h2>Golden Formula Narrative</h2>
-        <ul id="narrative-list" class="narrative-list">
-          <!-- Filled by gfNarrative output if you wire it -->
-        </ul>
+        <ul id="narrative-list" class="narrative-list"></ul>
       </section>
 
-      <!-- LOGIC LOG -->
+      <!-- LOG -->
       <section class="log-card">
         <h3>Logic Log</h3>
         <pre id="sim-log" class="sim-log"></pre>
       </section>
+
     </section>
 
     <!-- RIGHT PANEL: CHART -->
     <section class="right">
       <div class="chart-wrapper">
         <canvas id="sim-canvas" width="900" height="400"></canvas>
+
         <div class="chart-legend">
           <span class="legend-item">
             <span class="legend-color legend-entry"></span> Entry
@@ -91,8 +79,9 @@
   <!-- OCR -->
   <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 
-  <!-- CORE PIPELINE + SIMULATOR -->
+  <!-- PIPELINE + SIMULATOR -->
   <script type="module" src="core-logic.js"></script>
   <script type="module" src="simulator.js"></script>
+
 </body>
 </html>
