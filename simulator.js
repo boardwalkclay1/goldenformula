@@ -75,6 +75,10 @@ function loadImage(file) {
   img.onload = () => {
     canvas.width = 900;
     canvas.height = 400;
+
+    // Clear canvas before drawing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     statusEl.textContent = "Running Golden Formula...";
@@ -90,7 +94,8 @@ async function runPipeline() {
   try {
     log("Extracting text (OCR)...");
     const ocr = await Tesseract.recognize(canvas, "eng", { logger: () => {} });
-    const ocrText = extractOCR(ocr.data.words);
+
+    const ocrText = extractOCR(ocr.data.words ?? []);
 
     log("Running Golden Formula pipeline...");
     const result = await runGoldenPipeline(canvas, log, ocrText);
@@ -119,13 +124,15 @@ async function runPipeline() {
     // --------------------------------------------------
     // STRATEGY TAG
     // --------------------------------------------------
-    strategyTag.textContent = result.strategy?.toUpperCase() ?? result.rules.direction.toUpperCase();
+    strategyTag.textContent =
+      result.strategy?.toUpperCase() ??
+      result.rules.direction.toUpperCase();
 
     // --------------------------------------------------
     // NARRATIVE
     // --------------------------------------------------
     narrativeList.innerHTML = "";
-    if (result.narrative && Array.isArray(result.narrative)) {
+    if (Array.isArray(result.narrative)) {
       result.narrative.forEach(line => {
         const li = document.createElement("li");
         li.textContent = line;
@@ -145,8 +152,8 @@ async function runPipeline() {
 // --------------------------------------------------
 function extractOCR(words) {
   return words.map(w => ({
-    text: w.text.trim(),
-    x: w.bbox.x0,
-    y: w.bbox.y0
+    text: w.text?.trim() ?? "",
+    x: w.bbox?.x0 ?? 0,
+    y: w.bbox?.y0 ?? 0
   }));
 }
