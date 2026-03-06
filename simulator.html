@@ -15,11 +15,15 @@
 
       <h1 class="app-title">Golden Simulator</h1>
 
-      <!-- GOLD COIN UPLOAD BUTTON -->
-      <button id="upload-btn" class="gold-coin-btn">
-        <img src="gold-coin.png" class="coin-icon">
-        Upload Screenshot
-      </button>
+      <!-- DROP ZONE WRAPPER (REQUIRED BY JS) -->
+      <div id="drop-zone" class="drop-zone">
+        <!-- GOLD COIN UPLOAD BUTTON -->
+        <button id="upload-btn" class="gold-coin-btn">
+          <img src="gold-coin.png" class="coin-icon">
+          Upload Screenshot
+        </button>
+        <p class="drop-hint">or drag & drop a Webull chart screenshot here</p>
+      </div>
 
       <input type="file" id="file-input" accept="image/*" style="display:none;">
 
