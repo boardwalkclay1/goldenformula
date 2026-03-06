@@ -1,11 +1,8 @@
 // goldChart.js
-// Golden Simulator — Cinematic Gold Chart Renderer (Simplified)
+// Golden Simulator — Cinematic Gold Chart Renderer
 
-// Because this file is inside /modules/render/
-// all imports must reference THIS folder.
-
-import { drawOverlays } from "./overlays.js";
-import { drawAnnotations } from "./annotations.js";
+import { renderOverlays } from "./overlays.js";
+import { renderAnnotations } from "./annotations.js";
 
 export function renderGoldChart(canvas, candles, axis, liquidity, scoring, patterns) {
   const ctx = canvas.getContext("2d");
@@ -28,12 +25,20 @@ export function renderGoldChart(canvas, candles, axis, liquidity, scoring, patte
   // ------------------------------
   // OVERLAYS (entry/stop/target)
   // ------------------------------
-  drawOverlays(ctx, axis, liquidity, scoring, patterns);
+  renderOverlays(ctx, {
+    axis,
+    scoring,
+  });
 
   // ------------------------------
   // ANNOTATIONS (labels, time)
   // ------------------------------
-  drawAnnotations(ctx, axis, candles, scoring, patterns);
+  renderAnnotations(ctx, {
+    axis,
+    candles,
+    scoring,
+    patterns,
+  });
 }
 
 function drawCandle(ctx, c, axis) {
